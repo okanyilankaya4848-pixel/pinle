@@ -1007,6 +1007,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
             <button class="tb-btn" onclick="insertDivider()" title="Ayırıcı">─</button>
             <div class="tb-sep"></div>
             <button class="tb-btn" onclick="saveNote()" style="color:var(--green);">💾 Kaydet</button>
+            <div class="tb-sep"></div>
+            <button class="tb-btn" onclick="curNoteId&&deleteNote(curNoteId)" style="color:var(--red);" title="Notu Sil">🗑️</button>
           </div>
           <div class="editor-meta-bar">
             <input class="editor-title-input" id="noteTitleInput" placeholder="Not başlığı..." oninput="noteChanged()">
@@ -1264,7 +1266,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
 //  EMAILJS CONFIG
 // ═══════════════════════════════════════
 let ejsCfg = JSON.parse(ls('g_ejs') || '{"serviceId":"","templateId":"","publicKey":""}');
-// Gömülü config varsa onu kullan — kullanıcının kendi ayarı yoksa
+// Gömülü config varsa onu kullan
 if(window._BUILTIN_EJS_CFG && (!ejsCfg.serviceId || !ejsCfg.publicKey)){
   ejsCfg = window._BUILTIN_EJS_CFG;
   lsSet('g_ejs', JSON.stringify(ejsCfg));
@@ -1272,14 +1274,21 @@ if(window._BUILTIN_EJS_CFG && (!ejsCfg.serviceId || !ejsCfg.publicKey)){
 let ejsReady = false;
 
 function initEmailJS(){
+  // Her zaman gömülü config'i öncelikli kullan
+  if(window._BUILTIN_EJS_CFG){
+    ejsCfg = window._BUILTIN_EJS_CFG;
+    lsSet('g_ejs', JSON.stringify(ejsCfg));
+  }
   if(ejsCfg.publicKey && ejsCfg.serviceId && ejsCfg.templateId){
     try{
       emailjs.init({ publicKey: ejsCfg.publicKey });
-      ejsReady=true; return true;
-    }catch(e){ ejsReady=false; return false; }
+      ejsReady = true; return true;
+    }catch(e){ ejsReady = false; return false; }
   }
   return false;
 }
+// Sayfa yüklenince hemen init et
+initEmailJS();
 
 // ═══════════════════════════════════════
 //  USER STATE
@@ -1454,57 +1463,58 @@ async function doLogin(){
 
   const savedCfg = window._BUILTIN_FB_CFG || JSON.parse(localStorage.getItem('g_fb_cfg')||'null');
 
-  // Gömülü config varsa localStorage'a kaydet ve Firebase'i başlat
+  // Gömülü config varsa localStorage'a yaz
   if(window._BUILTIN_FB_CFG && !localStorage.getItem('g_fb_cfg')){
     localStorage.setItem('g_fb_cfg', JSON.stringify(window._BUILTIN_FB_CFG));
-    if(!window._fbReady) window.initFirebase(window._BUILTIN_FB_CFG);
   }
 
-  // Case 1: Firebase hazır — hesabı ara
-  if(window._fbReady){
-    setLoginStatus('☁️ Hesap kontrol ediliyor...','info');
-    try {
-      const remoteConfig = await window.fbLoadConfig();
-      if(remoteConfig){
-        setLoginStatus('✅ Hesap bulundu!','ok');
-        setTimeout(()=>goToEmailJSOrApp(), 600);
-        return;
-      }
-    } catch(e){}
-    // Yeni hesap — EmailJS adımına geç
+  // Firebase yoksa direkt giriş yap
+  if(!savedCfg){
     setLoginStatus('','info');
     goToEmailJSOrApp();
     return;
   }
 
-  // Case 2: Firebase config var ama henüz init edilmedi — bekle
-  if(savedCfg){
-    setLoginStatus('☁️ Bağlanıyor...','info');
-    if(!window._fbReady) window.initFirebase(savedCfg);
-    window.addEventListener('firebase-ready', async ()=>{
-      try {
-        const remoteConfig = await window.fbLoadConfig();
-        if(remoteConfig){
-          setLoginStatus('✅ Hesap bulundu!','ok');
-          setTimeout(()=>goToEmailJSOrApp(), 600);
-          return;
-        }
-      } catch(e){}
-      setLoginStatus('','info');
-      goToEmailJSOrApp();
-    }, {once:true});
-    window.addEventListener('firebase-error', ()=>{
-      setLoginStatus('','info');
-      goToEmailJSOrApp();
-    }, {once:true});
-    return;
+  // Firebase hazır değilse başlat, max 3sn bekle
+  if(!window._fbReady){
+    window.initFirebase(savedCfg);
   }
 
-  // Case 3: Firebase config hiç yok — kurulum gerekli
-  setLoginStatus('','info');
-  const fbNote = document.getElementById('fbNewDeviceNote');
-  if(fbNote) fbNote.style.display='block';
-  showLoginStep('stepFirebase');
+  // Firebase hazırsa hesabı kontrol et, değilse max 3sn bekle sonra geç
+  setLoginStatus('☁️ Bağlanıyor...','info');
+
+  const proceed = async () => {
+    try {
+      const remoteConfig = await Promise.race([
+        window.fbLoadConfig(),
+        new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 4000))
+      ]);
+      if(remoteConfig){
+        setLoginStatus('✅ Hesap bulundu!','ok');
+        setTimeout(()=>goToEmailJSOrApp(), 400);
+      } else {
+        goToEmailJSOrApp();
+      }
+    } catch(e){
+      // timeout veya hata — yine de giriş yap
+      goToEmailJSOrApp();
+    }
+  };
+
+  if(window._fbReady){
+    await proceed();
+  } else {
+    const onReady = async () => { await proceed(); };
+    const onErr   = () => { setLoginStatus('','info'); goToEmailJSOrApp(); };
+    window.addEventListener('firebase-ready', onReady, {once:true});
+    window.addEventListener('firebase-error', onErr,   {once:true});
+    // 4sn içinde firebase-ready gelmezse yine de giriş yap
+    setTimeout(()=>{
+      window.removeEventListener('firebase-ready', onReady);
+      window.removeEventListener('firebase-error', onErr);
+      if(!window._fbReady){ setLoginStatus('','info'); goToEmailJSOrApp(); }
+    }, 4000);
+  }
 }
 
 function setLoginStatus(msg, type){
@@ -1714,11 +1724,12 @@ async function sendToAll(subject, bodyHtml, recipientList){
 }
 
 async function sendViaGmail(toList, subject, bodyHtml){
-  // Normalize to array
   const recipients = Array.isArray(toList) ? toList : [toList];
   if(!recipients.length) return false;
 
-  // Always show preview first — user confirms before sending
+  // Gömülü config varsa her seferinde taze init et (hesap değişimlerinde garantili çalışsın)
+  initEmailJS();
+
   return new Promise((resolve) => {
     showEmailPreview(recipients, subject, bodyHtml, async (confirmed) => {
       if(!confirmed){ resolve(false); return; }
@@ -1727,18 +1738,26 @@ async function sendViaGmail(toList, subject, bodyHtml){
         showNotif('ℹ️','EmailJS Ayarlanmamış','Sağ üst menüden EmailJS ayarlarını tamamla.');
         resolve(false); return;
       }
+
+      // Gönderimden önce init garantisi
+      if(!ejsReady){
+        try { emailjs.init({ publicKey: ejsCfg.publicKey }); ejsReady = true; }
+        catch(e){ showNotif('❌','EmailJS Hatası','Başlatılamadı: '+e.message); resolve(false); return; }
+      }
+
       try{
         const plainText = bodyHtml
           .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'')
           .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')
           .replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
 
-        // Send to each recipient
         const results = await Promise.allSettled(
           recipients.map(to =>
             emailjs.send(ejsCfg.serviceId, ejsCfg.templateId,
               { to_email: to, subject, message: plainText,
-                from_name: 'Pinle', user_name: googleUser?.name||'Pinle', reply_to: googleUser?.email||to },
+                from_name: googleUser?.name||'Pinle',
+                user_name: googleUser?.name||'Pinle',
+                reply_to:  googleUser?.email||to },
               { publicKey: ejsCfg.publicKey })
           )
         );
@@ -1772,6 +1791,8 @@ function showEmailPreview(toList, subject, html, callback){
   div.id = uid;
   div.style.cssText = 'position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);backdrop-filter:blur(5px);';
 
+  // Her önizleme açılışında init garantisi
+  initEmailJS();
   const hasEmailJS = !!(ejsCfg.serviceId && ejsCfg.templateId && ejsCfg.publicKey);
 
   // Recipients display
@@ -2263,12 +2284,149 @@ function renderNoteList(){
   const container=document.getElementById('noteListItems');
   if(!list.length){container.innerHTML=`<div class="empty-state" style="padding:24px;font-size:.8rem;">Not bulunamadı</div>`;return;}
   container.innerHTML=list.map(n=>`
-    <div class="note-item${curNoteId===n.id?' active':''}" onclick="loadNote('${n.id}')">
-      <div class="note-item-title">${n.title||'Başlıksız Not'}</div>
-      <div class="note-item-preview">${stripHtml(n.content||'').substring(0,80)||'...'}</div>
-      <div class="note-item-date">${fmtDateTime(n.updatedAt)}</div>
-      ${(n.tags||[]).length?`<div class="note-tags">${n.tags.map(t=>`<span class="note-tag">#${t}</span>`).join('')}</div>`:''}
+    <div class="note-item${curNoteId===n.id?' active':''}" onclick="loadNote('${n.id}')" oncontextmenu="noteContextMenu(event,'${n.id}');return false;">
+      <div style="display:flex;align-items:flex-start;gap:6px;">
+        <div style="flex:1;min-width:0;">
+          <div class="note-item-title">${n.title||'Başlıksız Not'}</div>
+          <div class="note-item-preview">${stripHtml(n.content||'').substring(0,80)||'...'}</div>
+          <div class="note-item-date">${fmtDateTime(n.updatedAt)}</div>
+          ${(n.tags||[]).length?`<div class="note-tags">${n.tags.map(t=>`<span class="note-tag">#${t}</span>`).join('')}</div>`:''}
+        </div>
+        <button onclick="event.stopPropagation();noteContextMenu(event,'${n.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity .15s;flex-shrink:0;" class="note-item-menu-btn" title="Seçenekler">⋯</button>
+      </div>
     </div>`).join('');
+
+  // Show ⋯ button on hover
+  container.querySelectorAll('.note-item').forEach(el=>{
+    const btn=el.querySelector('.note-item-menu-btn');
+    el.addEventListener('mouseenter',()=>btn.style.opacity='1');
+    el.addEventListener('mouseleave',()=>btn.style.opacity='0');
+  });
+}
+
+function noteContextMenu(e, id){
+  e.preventDefault();
+  // Remove existing menu
+  document.getElementById('noteCtxMenu')?.remove();
+
+  const n = notes.find(n=>n.id===id);
+  if(!n) return;
+
+  const menu = document.createElement('div');
+  menu.id = 'noteCtxMenu';
+  menu.style.cssText = `position:fixed;z-index:999;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:170px;box-shadow:0 8px 30px rgba(0,0,0,.4);`;
+  menu.style.left = Math.min(e.clientX, window.innerWidth-185)+'px';
+  menu.style.top  = Math.min(e.clientY, window.innerHeight-140)+'px';
+
+  const item = (icon, label, action, danger=false) => {
+    const el = document.createElement('div');
+    el.style.cssText = `display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:.83rem;color:${danger?'var(--red)':'var(--text)'};transition:background .1s;`;
+    el.innerHTML = `<span>${icon}</span>${label}`;
+    el.onmouseenter = ()=>el.style.background='var(--s3)';
+    el.onmouseleave = ()=>el.style.background='transparent';
+    el.onclick = ()=>{ menu.remove(); action(); };
+    return el;
+  };
+
+  menu.appendChild(item('📋','Notu Kopyala', ()=>{
+    const n=notes.find(n=>n.id===id);
+    navigator.clipboard?.writeText(stripHtml(n?.content||''));
+    showNotif('📋','Kopyalandı','Not içeriği panoya kopyalandı.');
+  }));
+  menu.appendChild(item('📖','Deftere Taşı', ()=> openMoveNoteModal(id)));
+  menu.appendChild(item('🔁','Notu Çoğalt', ()=> duplicateNote(id)));
+
+  // Divider
+  const sep=document.createElement('div');
+  sep.style.cssText='height:1px;background:var(--border);margin:4px 0;';
+  menu.appendChild(sep);
+
+  menu.appendChild(item('🗑️','Notu Sil', ()=> deleteNote(id), true));
+
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click', ()=>menu.remove(), {once:true}), 50);
+}
+
+function deleteNote(id){
+  const n = notes.find(n=>n.id===id);
+  if(!n) return;
+
+  // Confirm dialog
+  const uid = 'del-note-'+Date.now();
+  const overlay = document.createElement('div');
+  overlay.id = uid;
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);';
+  overlay.innerHTML = `
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:24px;width:320px;max-width:92vw;box-shadow:0 16px 50px rgba(0,0,0,.5);">
+      <div style="font-size:1.8rem;margin-bottom:10px;">🗑️</div>
+      <div style="font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:6px;">"${n.title||'Başlıksız Not'}" silinsin mi?</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-bottom:20px;">Bu işlem geri alınamaz.</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('${uid}').remove()" style="flex:1;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;color:var(--text);cursor:pointer;">İptal</button>
+        <button id="${uid}-confirm" style="flex:1;background:var(--red);border:none;border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;font-weight:600;color:#fff;cursor:pointer;">Sil</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById(uid+'-confirm').onclick = ()=>{
+    overlay.remove();
+    notes = notes.filter(n=>n.id!==id);
+    if(curNoteId===id){
+      curNoteId = notes[0]?.id||null;
+      if(curNoteId) loadNote(curNoteId);
+      else {
+        document.getElementById('noteTitleInput').value='';
+        document.getElementById('noteContentEditable').innerHTML='';
+      }
+    }
+    saveNotes();
+    renderNoteList();
+    renderTagCloud();
+    showNotif('🗑️','Silindi',`"${n.title||'Başlıksız Not'}" silindi.`);
+  };
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+function duplicateNote(id){
+  const n = notes.find(n=>n.id===id);
+  if(!n) return;
+  const copy = {...n, id:Date.now().toString(), title:(n.title||'Başlıksız Not')+' (kopya)', createdAt:Date.now(), updatedAt:Date.now()};
+  const idx = notes.findIndex(n=>n.id===id);
+  notes.splice(idx+1,0,copy);
+  saveNotes();
+  renderNoteList();
+  showNotif('🔁','Çoğaltıldı','Not kopyası oluşturuldu.');
+}
+
+function openMoveNoteModal(id){
+  const n = notes.find(n=>n.id===id);
+  if(!n) return;
+  const uid = 'move-note-'+Date.now();
+  const overlay = document.createElement('div');
+  overlay.id = uid;
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);';
+  const nbOptions = notebooks.map(nb=>`<option value="${nb.id}"${n.notebook===nb.id?' selected':''}>${nb.name}</option>`).join('');
+  overlay.innerHTML = `
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:24px;width:300px;max-width:92vw;">
+      <div style="font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:14px;">📖 Deftere Taşı</div>
+      <select id="${uid}-sel" class="fs" style="width:100%;margin-bottom:16px;">
+        <option value="">Defter seçme</option>
+        ${nbOptions}
+      </select>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('${uid}').remove()" style="flex:1;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;color:var(--text);cursor:pointer;">İptal</button>
+        <button onclick="moveNote('${id}','${uid}')" style="flex:1;background:var(--gold);border:none;border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;font-weight:600;color:#0f0f11;cursor:pointer;">Taşı</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+function moveNote(noteId, uid){
+  const n = notes.find(n=>n.id===noteId);
+  const nb = document.getElementById(uid+'-sel').value;
+  if(n){ n.notebook=nb; n.updatedAt=Date.now(); saveNotes(); renderNoteList(); renderNotebooks(); }
+  document.getElementById(uid)?.remove();
+  showNotif('📖','Taşındı','Not deftere taşındı.');
 }
 function stripHtml(h){return h.replace(/<[^>]+>/g,'');}
 function fmtDateTime(ts){
