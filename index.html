@@ -1713,11 +1713,17 @@ function updateGmailStatus(){
 //  EMAILJS SEND
 // ═══════════════════════════════════════
 
-// Send to all configured recipients (or a specific list)
+// Her zaman o anki kullanıcının e-postasını alıcı olarak döndürür
+function currentUserRecipients(){
+  const email = googleUser?.email;
+  if(!email) return [];
+  return [email];
+}
+
 async function sendToAll(subject, bodyHtml, recipientList){
-  const targets = recipientList || emailCfg.recipients || [];
+  const targets = recipientList || currentUserRecipients();
   if(!targets.length){
-    showNotif('⚠️','Alıcı Yok','E-posta ayarlarından alıcı ekle.');
+    showNotif('⚠️','Alıcı Yok','Giriş yapman gerekiyor.');
     return false;
   }
   return sendViaGmail(targets, subject, bodyHtml);
@@ -1845,8 +1851,8 @@ function showEmailPreview(toList, subject, html, callback){
 }
 
 async function sendTestEmail(){
-  const recipients = emailCfg.recipients?.length ? emailCfg.recipients : (googleUser?.email ? [googleUser.email] : []);
-  if(!recipients.length){ showNotif('⚠️','Alıcı Yok','E-posta ayarlarından alıcı ekle.'); return; }
+  const recipients = currentUserRecipients();
+  if(!recipients.length){ showNotif('⚠️','Giriş Gerekli','Önce giriş yapmalısın.'); return; }
   const today = toDs(new Date());
   const todayTasks = tasks.filter(t=>t.date===today&&!t.done);
   const html = buildReminderEmailHtml(todayTasks.slice(0,5), emailCfg.lang||'tr');
@@ -1856,8 +1862,8 @@ async function sendTestEmail(){
 }
 
 async function simulateEmail(task){
-  const recipients = emailCfg.recipients?.length ? emailCfg.recipients : (googleUser?.email ? [googleUser.email] : []);
-  if(!recipients.length){ showNotif('⚠️','Alıcı Yok','E-posta ayarlarından alıcı ekle.'); return; }
+  const recipients = currentUserRecipients();
+  if(!recipients.length) return;
   const lang = emailCfg.lang||'tr';
   const p = {yuksek:'Yüksek',orta:'Orta',dusuk:'Düşük'};
   const subject = lang==='tr'
@@ -2177,7 +2183,7 @@ function openAddTask(){
   document.getElementById('tTime').value='';
   document.getElementById('tCat').value='';
   document.getElementById('tProject').value='';
-  if(emailCfg.default)document.getElementById('tEmail').value=emailCfg.default;
+  if(emailCfg.default)document.getElementById('tEmail').value=googleUser?.email||'';
   selP('orta'); selR('none',document.querySelector('[data-r=none]'));
   emailOn=false;
   document.getElementById('emailTgl').classList.remove('on');
@@ -2265,7 +2271,7 @@ function toggleEmail(){
   document.getElementById('emailTgl').classList.toggle('on',emailOn);
   document.getElementById('emailTglLbl').textContent=emailOn?'E-posta açık':'E-posta bildirimi kapalı';
   document.getElementById('emailBox').classList.toggle('show',emailOn);
-  if(emailOn&&emailCfg.default)document.getElementById('tEmail').value=emailCfg.default;
+  if(emailOn&&googleUser?.email)document.getElementById('tEmail').value=googleUser.email;
 }
 
 // ═══════════════════════════════════════
@@ -2726,7 +2732,7 @@ function startReminderChecker(){
         if('Notification' in window && Notification.permission==='granted')
           new Notification('Pinle',{body:`Bugün ${todayTasks.length} görevin var!`});
         // Send reminder email automatically (no preview for scheduled reminders)
-        const recs = emailCfg.recipients?.length ? emailCfg.recipients : (googleUser?.email ? [googleUser.email] : []);
+        const recs = currentUserRecipients();
         if(recs.length > 0 && todayTasks.length > 0 && ejsCfg.serviceId){
           const lang = emailCfg.lang||'tr';
           const subject = lang==='tr' ? `⏰ Pinle Hatırlatıcı — ${today}` : `⏰ Pinle Reminder — ${today}`;
