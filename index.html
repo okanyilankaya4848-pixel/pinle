@@ -17,6 +17,14 @@ import { getFirestore, doc, setDoc, getDoc, collection, getDocs }
 // Veriler her kullanıcının kendi UID'si altında ayrı ayrı saklanır.
 window._BUILTIN_FB_CFG = null; // <-- Firebase config'ini buraya gir (aşağıya bak)
 
+// ── Gömülü EmailJS config — tüm kullanıcılar bu hesap üzerinden mail gönderir ──
+// emailjs.com → Account → Public Key / Email Services → Service ID / Email Templates → Template ID
+window._BUILTIN_EJS_CFG = {
+  serviceId:  "service_jz0chfg",
+  templateId: "template_59beo8c",
+  publicKey:  "IOyclTrQb7GTmGxi7"
+};
+
 window._fbReady = false;
 window._fbCfg   = window._BUILTIN_FB_CFG || JSON.parse(localStorage.getItem('g_fb_cfg') || 'null');
 
@@ -1256,6 +1264,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
 //  EMAILJS CONFIG
 // ═══════════════════════════════════════
 let ejsCfg = JSON.parse(ls('g_ejs') || '{"serviceId":"","templateId":"","publicKey":""}');
+// Gömülü config varsa onu kullan — kullanıcının kendi ayarı yoksa
+if(window._BUILTIN_EJS_CFG && (!ejsCfg.serviceId || !ejsCfg.publicKey)){
+  ejsCfg = window._BUILTIN_EJS_CFG;
+  lsSet('g_ejs', JSON.stringify(ejsCfg));
+}
 let ejsReady = false;
 
 function initEmailJS(){
@@ -1314,6 +1327,17 @@ function scheduleSync(){
 const MONTHS=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 const DAYS=['Pz','Pt','Sa','Ça','Pe','Cu','Ct'];
 const DAYSFULL=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+
+function goToEmailJSOrApp(){
+  // Gömülü EmailJS config varsa EmailJS adımını atla
+  if(window._BUILTIN_EJS_CFG){
+    const savedCfg = window._BUILTIN_FB_CFG || JSON.parse(localStorage.getItem('g_fb_cfg')||'null');
+    if(savedCfg) waitForFirebaseAndLoad();
+    else onLoginSuccess();
+    return;
+  }
+  goToEmailJSOrApp();
+}
 
 // ═══════════════════════════════════════
 //  AUTH TAB SWITCH
@@ -1389,7 +1413,7 @@ async function doRegister(){
   setTimeout(()=>{
     const savedCfg = window._BUILTIN_FB_CFG || JSON.parse(localStorage.getItem('g_fb_cfg')||'null');
     if(savedCfg) waitForFirebaseAndLoad();
-    else showLoginStep('stepEmailJS');
+    else goToEmailJSOrApp();
   }, 700);
 }
 
@@ -1443,13 +1467,13 @@ async function doLogin(){
       const remoteConfig = await window.fbLoadConfig();
       if(remoteConfig){
         setLoginStatus('✅ Hesap bulundu!','ok');
-        setTimeout(()=>showLoginStep('stepEmailJS'), 600);
+        setTimeout(()=>goToEmailJSOrApp(), 600);
         return;
       }
     } catch(e){}
     // Yeni hesap — EmailJS adımına geç
     setLoginStatus('','info');
-    showLoginStep('stepEmailJS');
+    goToEmailJSOrApp();
     return;
   }
 
@@ -1462,16 +1486,16 @@ async function doLogin(){
         const remoteConfig = await window.fbLoadConfig();
         if(remoteConfig){
           setLoginStatus('✅ Hesap bulundu!','ok');
-          setTimeout(()=>showLoginStep('stepEmailJS'), 600);
+          setTimeout(()=>goToEmailJSOrApp(), 600);
           return;
         }
       } catch(e){}
       setLoginStatus('','info');
-      showLoginStep('stepEmailJS');
+      goToEmailJSOrApp();
     }, {once:true});
     window.addEventListener('firebase-error', ()=>{
       setLoginStatus('','info');
-      showLoginStep('stepEmailJS');
+      goToEmailJSOrApp();
     }, {once:true});
     return;
   }
@@ -1624,9 +1648,12 @@ function closeUserMenuOutside(e){
 function openEmailJSSettings(){
   toggleUserMenu(false);
   const el=document.getElementById('ejsCurrentStatus');
-  if(ejsReady){
+  if(window._BUILTIN_EJS_CFG && ejsReady){
     el.style.background='rgba(86,184,125,.08)';el.style.border='1px solid rgba(86,184,125,.2)';el.style.color='var(--green)';
-    el.textContent='✅ EmailJS bağlı ve aktif — e-postalar Gmail\'inden gönderiliyor.';
+    el.textContent='✅ Ortak EmailJS hesabı aktif — tüm kullanıcılar bu hesap üzerinden mail gönderir.';
+  } else if(ejsReady){
+    el.style.background='rgba(86,184,125,.08)';el.style.border='1px solid rgba(86,184,125,.2)';el.style.color='var(--green)';
+    el.textContent='✅ EmailJS bağlı ve aktif.';
   } else {
     el.style.background='rgba(217,136,74,.08)';el.style.border='1px solid rgba(217,136,74,.2)';el.style.color='var(--orange)';
     el.textContent='⚠️ EmailJS henüz ayarlanmamış. Aşağıdaki bilgileri girerek aktifleştir.';
@@ -2717,7 +2744,7 @@ function saveFirebaseConfig(){
   window.addEventListener('firebase-ready', async ()=>{
     await window.fbSaveConfig(cfg);
   }, {once:true});
-  showLoginStep('stepEmailJS');
+  goToEmailJSOrApp();
 }
 
 function skipFirebase(){
