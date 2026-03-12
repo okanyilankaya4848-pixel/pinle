@@ -62,7 +62,13 @@ window.initFirebase = function(cfg){
     // config using only email + password, without Google Auth.
     window.fbSaveConfig = async function(cfgData){
       if(!uid()) return;
-      try { await setDoc(doc(db,'_accounts',uid()),{ cfg: JSON.stringify(cfgData), updatedAt: Date.now() }); }
+      try {
+        await setDoc(doc(db,'_accounts',uid()),{
+          cfg: JSON.stringify(cfgData),
+          email: googleUser?.email || '',
+          updatedAt: Date.now()
+        });
+      }
       catch(e){ console.warn('fbSaveConfig error:',e); }
     };
     window.fbLoadConfig = async function(){
@@ -1616,7 +1622,6 @@ function onLoginSuccess(){
   app.style.flex='1'; app.style.overflow='hidden';
   if(googleUser){
     if(googleUser.email && !window._fbUid){
-      // Returning user: re-derive UID (password not available, use email-only fallback)
       window._fbUid = googleUser.email.replace(/[^a-z0-9]/gi,'_').toLowerCase();
     }
     document.getElementById('userPill').style.display='flex';
@@ -1624,6 +1629,11 @@ function onLoginSuccess(){
     document.getElementById('userAvatarInitial').textContent = initials;
     document.getElementById('userName').textContent = googleUser.name;
     document.getElementById('userEmailDisplay').textContent = googleUser.email || 'E-posta yok';
+    // E-postayı Firestore'da güncelle (Apps Script için)
+    if(window._fbReady && googleUser.email){
+      const savedCfg = JSON.parse(localStorage.getItem('g_fb_cfg')||'null');
+      if(savedCfg) window.fbSaveConfig(savedCfg).catch(()=>{});
+    }
   }
   initEmailJS();
   updateGmailStatus();
