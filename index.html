@@ -2277,7 +2277,34 @@ function toggleDone(id){
 }
 function deleteTask(id){
   const realId=id.includes('_r')?id.split('_r')[0]:id;
-  if(!confirm('Silinsin mi?'))return;
+  const t=tasks.find(t=>t.id===realId);
+  if(!t)return;
+
+  if(t.priority==='yuksek'){
+    // Yüksek öncelikli → onay penceresi
+    const uid='del-task-'+Date.now();
+    const overlay=document.createElement('div');
+    overlay.id=uid;
+    overlay.style.cssText='position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);';
+    overlay.innerHTML=`
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:24px;width:320px;max-width:92vw;box-shadow:0 16px 50px rgba(0,0,0,.5);">
+        <div style="font-size:1.8rem;margin-bottom:10px;">🗑️</div>
+        <div style="font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:6px;">"${t.title}" silinsin mi?</div>
+        <div style="font-size:.8rem;color:var(--red);margin-bottom:20px;">⚠️ Bu yüksek öncelikli bir görev!</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="document.getElementById('${uid}').remove()" style="flex:1;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;color:var(--text);cursor:pointer;">İptal</button>
+          <button onclick="document.getElementById('${uid}').remove();_doDeleteTask('${realId}')" style="flex:1;background:var(--red);border:none;border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;font-weight:600;color:#fff;cursor:pointer;">Sil</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  } else {
+    // Diğerleri → direkt sil
+    _doDeleteTask(realId);
+  }
+}
+
+function _doDeleteTask(realId){
   tasks=tasks.filter(t=>t.id!==realId);
   saveTasks();refreshAll();
   showNotif('🗑','Silindi','Görev kaldırıldı.');
