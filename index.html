@@ -20,9 +20,9 @@ window._BUILTIN_FB_CFG = null; // <-- Firebase config'ini buraya gir (aşağıya
 // ── Gömülü EmailJS config — tüm kullanıcılar bu hesap üzerinden mail gönderir ──
 // emailjs.com → Account → Public Key / Email Services → Service ID / Email Templates → Template ID
 window._BUILTIN_EJS_CFG = {
-  serviceId:  "service_jz0chfg",
-  templateId: "template_59beo8c",
-  publicKey:  "IOyclTrQb7GTmGxi7"
+  serviceId:  "service_szq980m",
+  templateId: "template_3km7zg8",
+  publicKey:  "G4kHuOtoD87nydky4"
 };
 
 window._fbReady = false;
@@ -1551,7 +1551,7 @@ async function testEmailJS(){
       message:  'EmailJS bağlantısı başarıyla kuruldu! Pinle artık e-posta gönderebilir.',
       from_name: 'Pinle',
       user_name: document.getElementById('loginName').value.trim() || 'Kullanıcı',
-      reply_to:  to,
+      reply_to:  'pinle.okan@gmail.com',
     }, { publicKey: pk });
     setTestResult(res,'✅ Başarılı! E-posta kutunu kontrol et.','ok');
   } catch(e){ setTestResult(res,'❌ Hata: '+(e.text||e.message||JSON.stringify(e)),'error'); }
@@ -1573,7 +1573,7 @@ async function testEmailJS2(){
       message:  'EmailJS bağlantısı güncellendi ve çalışıyor!',
       from_name: 'Pinle',
       user_name: googleUser?.name || 'Pinle',
-      reply_to:  to,
+      reply_to:  'pinle.okan@gmail.com',
     }, { publicKey: pk });
     setTestResult(res,'✅ Başarılı! E-posta kutunu kontrol et.','ok');
   } catch(e){ setTestResult(res,'❌ Hata: '+(e.text||e.message||JSON.stringify(e)),'error'); }
@@ -1773,7 +1773,7 @@ async function sendViaGmail(toList, subject, bodyHtml){
               { to_email: to, subject, message: plainText,
                 from_name: googleUser?.name||'Pinle',
                 user_name: googleUser?.name||'Pinle',
-                reply_to:  googleUser?.email||to },
+                reply_to:  'pinle.okan@gmail.com' },
               { publicKey: ejsCfg.publicKey })
           )
         );
