@@ -2568,6 +2568,9 @@ function trackerNextMonth(){
 function renderTrackerTable(){
   document.getElementById('trackerMonthLabel').textContent = MONTHS_TR_LONG[trackerMonth] + ' ' + trackerYear;
   const daysInMonth = new Date(trackerYear, trackerMonth+1, 0).getDate();
+  const today = new Date();
+  const isCurrentMonth = trackerYear === today.getFullYear() && trackerMonth === today.getMonth();
+  const passedDays = isCurrentMonth ? today.getDate() : daysInMonth;
   const container = document.getElementById('trackerTable');
 
   let html = `<table style="border-collapse:collapse;width:100%;font-size:.8rem;">`;
@@ -2627,6 +2630,51 @@ function renderTrackerTable(){
   }
 
   html += `</tbody></table>`;
+
+  // İlerleme istatistikleri
+  if(trackerCols.length > 0){
+    html += `<div style="margin-top:16px;padding:16px;background:var(--s2);border:1px solid var(--border);border-radius:12px;">`;
+    html += `<div style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:12px;">📈 ${MONTHS_TR_LONG[trackerMonth]} İlerlemesi <span style="font-size:.72rem;color:var(--text3);font-weight:400;">(${passedDays} gün geçti)</span></div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:10px;">`;
+
+    trackerCols.forEach((col, ci) => {
+      let checked = 0;
+      for(let d=1; d<=passedDays; d++){
+        const dateKey = trackerYear+'-'+String(trackerMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+        if(trackerData[dateKey] && trackerData[dateKey]['c'+ci]) checked++;
+      }
+      const pct = passedDays > 0 ? Math.round(checked/passedDays*100) : 0;
+      const color = pct>=80?'var(--green)':pct>=50?'var(--gold)':'var(--red)';
+      html += `<div style="flex:1;min-width:140px;background:var(--s3);border-radius:10px;padding:10px 12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:.78rem;color:var(--text);">${col.icon||'●'} ${col.name}</span>
+          <span style="font-size:.85rem;font-weight:700;color:${color};">${pct}%</span>
+        </div>
+        <div style="background:var(--s1);border-radius:4px;height:6px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .4s;"></div>
+        </div>
+        <div style="font-size:.7rem;color:var(--text3);margin-top:4px;">${checked} / ${passedDays} gün</div>
+      </div>`;
+    });
+
+    // Genel ilerleme
+    let totalChecked = 0, totalPossible = passedDays * trackerCols.length;
+    for(let d=1; d<=passedDays; d++){
+      const dateKey = trackerYear+'-'+String(trackerMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      trackerCols.forEach((_,ci)=>{ if(trackerData[dateKey]&&trackerData[dateKey]['c'+ci]) totalChecked++; });
+    }
+    const totalPct = totalPossible > 0 ? Math.round(totalChecked/totalPossible*100) : 0;
+    const totalColor = totalPct>=80?'var(--green)':totalPct>=50?'var(--gold)':'var(--red)';
+    html += `</div>`;
+    html += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;">
+      <span style="font-size:.78rem;color:var(--text2);">Genel:</span>
+      <div style="flex:1;background:var(--s1);border-radius:4px;height:8px;overflow:hidden;">
+        <div style="width:${totalPct}%;height:100%;background:${totalColor};border-radius:4px;transition:width .4s;"></div>
+      </div>
+      <span style="font-size:.9rem;font-weight:700;color:${totalColor};">${totalPct}%</span>
+    </div>`;
+    html += `</div>`;
+  }
   container.innerHTML = html;
 }
 
