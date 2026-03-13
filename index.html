@@ -878,6 +878,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
       <div class="nav-item" onclick="setNav('weekly',this)"><span class="ni">🗓</span>Haftalık</div>
       <div class="nav-item" onclick="setNav('kanban',this)"><span class="ni">🗂</span>Kanban</div>
       <div class="nav-item" onclick="setNav('notes',this)"><span class="ni">📝</span>Notlar<span class="nav-badge" id="nb-notes">0</span></div>
+      <div class="nav-item" onclick="setNav('tracker',this)"><span class="ni">📊</span>Takip</div>
     </div>
 
     <div class="nav-section">
@@ -1039,6 +1040,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
     </div>
 
   </div><!-- /main-panel -->
+
+  <!-- TRACKER VIEW -->
+  <div id="view-tracker" style="display:none;flex-direction:column;flex:1;overflow:hidden;" class="fade-up">
+    <div class="view-header" style="padding:16px 20px 12px;">
+      <span class="view-title">📊 Aylık Takip</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="trackerPrevMonth()" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);cursor:pointer;">‹</button>
+        <span id="trackerMonthLabel" style="font-size:.9rem;color:var(--text2);min-width:100px;text-align:center;"></span>
+        <button onclick="trackerNextMonth()" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);cursor:pointer;">›</button>
+        <button onclick="openTrackerColModal()" style="background:var(--gold);border:none;border-radius:6px;padding:5px 12px;color:#0f0f11;font-size:.8rem;font-weight:600;cursor:pointer;">+ Sütun</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:0 12px 16px;">
+      <div id="trackerTable"></div>
+    </div>
+  </div>
 </div><!-- /app-body -->
 
 <!-- ─── TASK MODAL ─── -->
@@ -1104,7 +1121,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
         <select class="fs" id="tEmailWhen">
           <option value="now">Hemen</option>
           <option value="hour1">1 saat önce</option>
-          <option value="hour2">2 saat önce</option>
           <option value="day1">1 gün önce</option>
         </select>
       </div>
@@ -1967,6 +1983,7 @@ function setNav(nav, el){
   if(nav==='kanban'){document.getElementById('view-kanban').style.display='flex';renderKanban();}
   else if(nav==='weekly'){document.getElementById('view-weekly').style.display='flex';renderWeekly();}
   else if(nav==='notes'){document.getElementById('view-notes').style.display='flex';renderNoteList();}
+  else if(nav==='tracker'){document.getElementById('view-tracker').style.display='flex';renderTrackerTable();}
   else{document.getElementById('view-list').style.display='flex';renderList();}
 
   updateViewTitle();
@@ -2491,6 +2508,153 @@ function updateWordCount(){
 }
 function saveNotes(){ lsSet('g_notes',JSON.stringify(notes)); scheduleSync(); }
 
+// ═══════════════════════════════════════════════════
+//  AYLIK TAKİP SİSTEMİ
+// ═══════════════════════════════════════════════════
+
+let trackerData    = JSON.parse(ls('g_tracker') || '{}');
+let trackerCols    = JSON.parse(ls('g_tracker_cols') || '[]');
+let trackerYear    = new Date().getFullYear();
+let trackerMonth   = new Date().getMonth(); // 0-11
+
+const DAYS_TR = ['Paz','Pzt','Sal','Çar','Per','Cum','Cts'];
+const MONTHS_TR_LONG = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+
+function saveTracker(){
+  lsSet('g_tracker', JSON.stringify(trackerData));
+  lsSet('g_tracker_cols', JSON.stringify(trackerCols));
+  scheduleSync();
+}
+
+function trackerPrevMonth(){
+  trackerMonth--;
+  if(trackerMonth < 0){ trackerMonth=11; trackerYear--; }
+  renderTrackerTable();
+}
+function trackerNextMonth(){
+  trackerMonth++;
+  if(trackerMonth > 11){ trackerMonth=0; trackerYear++; }
+  renderTrackerTable();
+}
+
+function renderTrackerTable(){
+  document.getElementById('trackerMonthLabel').textContent = MONTHS_TR_LONG[trackerMonth] + ' ' + trackerYear;
+  const daysInMonth = new Date(trackerYear, trackerMonth+1, 0).getDate();
+  const container = document.getElementById('trackerTable');
+
+  let html = `<table style="border-collapse:collapse;width:100%;min-width:600px;font-size:.8rem;">`;
+
+  // Header
+  html += `<thead><tr>`;
+  html += `<th style="padding:8px 6px;text-align:center;color:var(--text3);font-weight:500;white-space:nowrap;min-width:32px;">Gün</th>`;
+  html += `<th style="padding:8px 6px;text-align:center;color:var(--text3);font-weight:500;min-width:40px;">Gün</th>`;
+  html += `<th style="padding:8px 10px;text-align:left;color:var(--text3);font-weight:500;min-width:160px;">Not</th>`;
+  trackerCols.forEach((col,ci) => {
+    html += `<th style="padding:8px 4px;text-align:center;color:var(--text3);font-weight:500;min-width:60px;max-width:80px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;" title="${col.name}">${col.icon||'●'} ${col.name}</span>
+        <button onclick="deleteTrackerCol(${ci})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.65rem;opacity:.5;" title="Sil">✕</button>
+      </div>
+    </th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  // Rows
+  for(let d=1; d<=daysInMonth; d++){
+    const dateObj = new Date(trackerYear, trackerMonth, d);
+    const dayName = DAYS_TR[dateObj.getDay()];
+    const dateKey = trackerYear+'-'+String(trackerMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const rowData = trackerData[dateKey] || {};
+    const isToday = dateKey === toDs(new Date());
+    const isPaz = dateObj.getDay() === 0;
+    const isCum = dateObj.getDay() === 5;
+
+    html += `<tr style="border-bottom:1px solid var(--border);${isToday?'background:rgba(212,175,55,.07);':''}">`;
+    html += `<td style="padding:6px;text-align:center;font-weight:600;color:${isToday?'var(--gold)':'var(--text2)'};">${d}</td>`;
+    html += `<td style="padding:6px;text-align:center;color:${isPaz?'var(--red)':isCum?'var(--gold)':'var(--text3)'};font-size:.75rem;">${dayName}</td>`;
+    html += `<td style="padding:4px 6px;">
+      <input type="text" value="${(rowData.note||'').replace(/"/g,'&quot;')}" 
+        onchange="setTrackerNote('${dateKey}',this.value)"
+        placeholder="anı..." 
+        style="background:none;border:none;border-bottom:1px solid transparent;color:var(--text);font-size:.78rem;width:100%;outline:none;font-family:Inter,sans-serif;padding:2px 0;"
+        onfocus="this.style.borderBottomColor='var(--gold)'"
+        onblur="this.style.borderBottomColor='transparent'">
+    </td>`;
+
+    trackerCols.forEach((col,ci) => {
+      const val = rowData['c'+ci];
+      html += `<td style="padding:4px;text-align:center;">
+        <button onclick="toggleTrackerCell('${dateKey}',${ci})" 
+          style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:${val?'var(--gold)':'var(--s2)'};cursor:pointer;font-size:.85rem;transition:all .15s;"
+          title="${col.name}">
+          ${val ? (col.icon||'✓') : ''}
+        </button>
+      </td>`;
+    });
+
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+function setTrackerNote(dateKey, val){
+  if(!trackerData[dateKey]) trackerData[dateKey] = {};
+  trackerData[dateKey].note = val;
+  saveTracker();
+}
+
+function toggleTrackerCell(dateKey, colIdx){
+  if(!trackerData[dateKey]) trackerData[dateKey] = {};
+  trackerData[dateKey]['c'+colIdx] = !trackerData[dateKey]['c'+colIdx];
+  saveTracker();
+  renderTrackerTable();
+}
+
+function deleteTrackerCol(idx){
+  if(!confirm('"'+trackerCols[idx].name+'" sütunu silinsin mi?')) return;
+  trackerCols.splice(idx,1);
+  saveTracker();
+  renderTrackerTable();
+}
+
+function openTrackerColModal(){
+  const uid = 'tc-'+Date.now();
+  const overlay = document.createElement('div');
+  overlay.id = uid;
+  overlay.style.cssText='position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);';
+  overlay.innerHTML=`
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:24px;width:300px;max-width:92vw;">
+      <div style="font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:16px;">📊 Yeni Takip Sütunu</div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:.75rem;color:var(--text3);">Sütun Adı</label>
+        <input id="${uid}-name" class="fi" placeholder="örn: Kitap, Spor, Kod..." style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:.75rem;color:var(--text3);">İkon (emoji)</label>
+        <input id="${uid}-icon" class="fi" placeholder="örn: 📚 🏃 💻" style="margin-top:4px;max-width:80px;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('${uid}').remove()" style="flex:1;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;color:var(--text);cursor:pointer;">İptal</button>
+        <button onclick="addTrackerCol('${uid}')" style="flex:1;background:var(--gold);border:none;border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;font-weight:600;color:#0f0f11;cursor:pointer;">Ekle</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  setTimeout(()=>document.getElementById(uid+'-name').focus(),100);
+}
+
+function addTrackerCol(uid){
+  const name = document.getElementById(uid+'-name').value.trim();
+  const icon = document.getElementById(uid+'-icon').value.trim();
+  if(!name){ showNotif('⚠️','Hata','Sütun adı gerekli.'); return; }
+  trackerCols.push({name, icon: icon||'✓'});
+  saveTracker();
+  document.getElementById(uid).remove();
+  renderTrackerTable();
+}
+
 // Note tags
 function renderNoteTags(tags){
   const wrap=document.getElementById('noteTagsWrap');
@@ -2695,7 +2859,7 @@ function doSearch(q){
   const container=document.getElementById('taskList');
   if(!container)return;
   document.getElementById('view-list').style.display='flex';
-  ['view-kanban','view-weekly','view-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['view-kanban','view-weekly','view-notes','view-tracker'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   if(!filtered.length){container.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><p>"${q}" için sonuç bulunamadı</p></div>`;return;}
   container.innerHTML=filtered.map(taskCardHTML).join('');
 }
