@@ -2581,7 +2581,10 @@ function renderTrackerTable(){
     html += `<th style="padding:8px 4px;text-align:center;color:var(--text3);font-weight:500;min-width:60px;max-width:80px;">
       <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;" title="${col.name}">${col.icon||'●'} ${col.name}</span>
-        <button onclick="deleteTrackerCol(${ci})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.65rem;opacity:.5;" title="Sil">✕</button>
+        <div style="display:flex;gap:4px;">
+          <button onclick="editTrackerCol(${ci})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.65rem;opacity:.6;" title="Düzenle">✏️</button>
+          <button onclick="deleteTrackerCol(${ci})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.65rem;opacity:.5;" title="Sil">✕</button>
+        </div>
       </div>
     </th>`;
   });
@@ -2644,6 +2647,43 @@ function deleteTrackerCol(idx){
   if(!confirm('"'+trackerCols[idx].name+'" sütunu silinsin mi?')) return;
   trackerCols.splice(idx,1);
   saveTracker();
+  renderTrackerTable();
+}
+
+function editTrackerCol(idx){
+  const col = trackerCols[idx];
+  const uid = 'tc-edit-'+Date.now();
+  const overlay = document.createElement('div');
+  overlay.id = uid;
+  overlay.style.cssText='position:fixed;inset:0;z-index:600;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);';
+  overlay.innerHTML=`
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:24px;width:300px;max-width:92vw;">
+      <div style="font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:16px;">✏️ Sütunu Düzenle</div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:.75rem;color:var(--text3);">Sütun Adı</label>
+        <input id="${uid}-name" class="fi" value="${col.name}" style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:.75rem;color:var(--text3);">İkon (emoji)</label>
+        <input id="${uid}-icon" class="fi" value="${col.icon||''}" placeholder="örn: 📚 🏃 💻" style="margin-top:4px;max-width:80px;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('${uid}').remove()" style="flex:1;background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;color:var(--text);cursor:pointer;">İptal</button>
+        <button onclick="saveTrackerColEdit(${idx},'${uid}')" style="flex:1;background:var(--gold);border:none;border-radius:8px;padding:9px;font-family:Inter,sans-serif;font-size:.85rem;font-weight:600;color:#0f0f11;cursor:pointer;">Kaydet</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  setTimeout(()=>document.getElementById(uid+'-name').focus(),100);
+}
+
+function saveTrackerColEdit(idx, uid){
+  const name = document.getElementById(uid+'-name').value.trim();
+  const icon = document.getElementById(uid+'-icon').value.trim();
+  if(!name){ showNotif('⚠️','Hata','Sütun adı gerekli.'); return; }
+  trackerCols[idx] = {name, icon: icon||'✓'};
+  saveTracker();
+  document.getElementById(uid).remove();
   renderTrackerTable();
 }
 
