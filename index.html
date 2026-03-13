@@ -1035,27 +1035,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);displ
             <span style="font-size:.72rem;color:var(--text3);" id="noteWordCount">0 kelime</span>
             <span style="font-size:.72rem;color:var(--text3);" id="noteSaveStatus">—</span>
           </div>
+      </div>
+    </div>
+
+    </div><!-- /view-notes -->
+
+    <!-- TRACKER VIEW -->
+    <div id="view-tracker" style="display:none;flex-direction:column;flex:1;overflow:hidden;" class="fade-up">
+      <div class="view-header" style="padding:16px 20px 12px;">
+        <span class="view-title">📊 Aylık Takip</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="trackerPrevMonth()" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);cursor:pointer;">‹</button>
+          <span id="trackerMonthLabel" style="font-size:.9rem;color:var(--text2);min-width:100px;text-align:center;"></span>
+          <button onclick="trackerNextMonth()" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);cursor:pointer;">›</button>
+          <button onclick="openTrackerColModal()" style="background:var(--gold);border:none;border-radius:6px;padding:5px 12px;color:#0f0f11;font-size:.8rem;font-weight:600;cursor:pointer;">+ Sütun</button>
         </div>
+      </div>
+      <div style="flex:1;overflow:auto;padding:0 12px 16px;">
+        <div id="trackerTable" style="width:100%;"></div>
       </div>
     </div>
 
   </div><!-- /main-panel -->
-
-  <!-- TRACKER VIEW -->
-  <div id="view-tracker" style="display:none;flex-direction:column;flex:1;overflow:hidden;width:100%;" class="fade-up">
-    <div class="view-header" style="padding:16px 20px 12px;">
-      <span class="view-title">📊 Aylık Takip</span>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button onclick="trackerPrevMonth()" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);cursor:pointer;">‹</button>
-        <span id="trackerMonthLabel" style="font-size:.9rem;color:var(--text2);min-width:100px;text-align:center;"></span>
-        <button onclick="trackerNextMonth()" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);cursor:pointer;">›</button>
-        <button onclick="openTrackerColModal()" style="background:var(--gold);border:none;border-radius:6px;padding:5px 12px;color:#0f0f11;font-size:.8rem;font-weight:600;cursor:pointer;">+ Sütun</button>
-      </div>
-    </div>
-    <div style="flex:1;overflow:auto;padding:0 12px 16px;">
-      <div id="trackerTable" style="width:100%;"></div>
-    </div>
-  </div>
 </div><!-- /app-body -->
 
 <!-- ─── TASK MODAL ─── -->
