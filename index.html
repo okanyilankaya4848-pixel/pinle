@@ -1975,7 +1975,7 @@ function setNav(nav, el){
   if(el)el.classList.add('active');
   document.querySelectorAll('.notebook-item').forEach(e=>e.classList.remove('active'));
 
-  const views=['list','kanban','weekly','notes'];
+  const views=['list','kanban','weekly','notes','tracker'];
   views.forEach(v=>{
     const el2=document.getElementById('view-'+v);
     if(el2)el2.style.display='none';
