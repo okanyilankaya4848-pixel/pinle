@@ -3832,10 +3832,10 @@ document.querySelectorAll('.view-toggle-btn').forEach(btn => {
 });
 
 // ── Templates button ──────────────────────────────────────────
-document.getElementById('btn-templates')?.addEventListener('click', window.openTemplates);
+document.getElementById('btn-templates')?.addEventListener('click', () => window.openTemplates());
 
 // ── Firebase config open ──────────────────────────────────────
-document.getElementById('btn-fb-cfg')?.addEventListener('click', window.openFirebaseConfig);
+document.getElementById('btn-fb-cfg')?.addEventListener('click', () => window.openFirebaseConfig());
 
 // ── Email config save ─────────────────────────────────────────
 document.getElementById('btn-save-email-cfg')?.addEventListener('click', () => window.saveEmailConfig());
@@ -3844,13 +3844,13 @@ document.getElementById('btn-save-email-cfg')?.addEventListener('click', () => w
 document.getElementById('btn-save-fb-cfg')?.addEventListener('click', () => window.saveFirebaseConfig());
 
 // ── Task modal save ───────────────────────────────────────────
-document.getElementById('btn-save-task')?.addEventListener('click', window.saveTask_modal);
+document.getElementById('btn-save-task')?.addEventListener('click', () => window.saveTask_modal());
 
 // ── Delete current note ───────────────────────────────────────
-document.getElementById('btn-delete-note')?.addEventListener('click', window.deleteCurrentNote);
+document.getElementById('btn-delete-note')?.addEventListener('click', () => window.deleteCurrentNote());
 
 // ── New note button ───────────────────────────────────────────
-document.getElementById('btn-new-note')?.addEventListener('click', window.newNote);
+document.getElementById('btn-new-note')?.addEventListener('click', () => window.newNote());
 
 // ── Add tracker column ────────────────────────────────────────
 document.getElementById('btn-add-col')?.addEventListener('click', () => window.openAddColumnModal(null));
