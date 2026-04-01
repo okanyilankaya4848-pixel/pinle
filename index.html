@@ -4,14 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pinle — Görev & Not Yöneticisi</title>
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Main CSS -->
   <style>
 /* ============================================================
    PINLE — Main Stylesheet
@@ -1925,7 +1918,143 @@ img { display: block; max-width: 100%; }
   .weekly-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-</style>
+  </style>
+
+  <script type="module">
+/* ============================================================
+   firebase-init.js — Firebase SDK init + helpers (ES Module)
+   ============================================================ */
+
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+// Built-in Firebase config — tüm kullanıcılar bu projeye bağlanır
+window._BUILTIN_FB_CFG = {
+  apiKey:            "AIzaSyDGRpKNtkI_9blmfZrpMBI4vH691AAjuzc",
+  authDomain:        "pinlee.firebaseapp.com",
+  projectId:         "pinlee",
+  storageBucket:     "pinlee.appspot.com",
+  appId:             "1:419515948173:web:950420ab5f9055225c16c4"
+};
+
+let _db = null;
+let _app = null;
+
+/**
+ * Initialize Firebase with the given config object.
+ * @param {Object} cfg - Firebase config { apiKey, authDomain, projectId, ... }
+ */
+window.initFirebase = async function (cfg) {
+  try {
+    if (!cfg || !cfg.projectId) {
+      console.warn('[Pinle] Firebase config missing or invalid.');
+      return false;
+    }
+    // Avoid re-initializing if already done with same project
+    const existing = getApps().find(a => a.options.projectId === cfg.projectId);
+    if (existing) {
+      _app = existing;
+    } else {
+      _app = initializeApp(cfg, cfg.projectId + '_' + Date.now());
+    }
+    _db = getFirestore(_app);
+    window._fbReady = true;
+    console.log('[Pinle] Firebase initialized for project:', cfg.projectId);
+    return true;
+  } catch (e) {
+    console.error('[Pinle] Firebase init error:', e);
+    return false;
+  }
+};
+
+/**
+ * Save a key-value pair under users/{uid}/data/{key}
+ * @param {string} key
+ * @param {*} value - Will be JSON.stringified
+ */
+window.fbSave = async function (key, value) {
+  if (!_db || !window._fbUid) return false;
+  try {
+    const ref = doc(_db, 'users', window._fbUid, 'data', key);
+    await setDoc(ref, { v: JSON.stringify(value) });
+    return true;
+  } catch (e) {
+    console.error('[Pinle] fbSave error:', key, e);
+    return false;
+  }
+};
+
+/**
+ * Load all keys from users/{uid}/data/
+ * @returns {Object} map of key → parsed value
+ */
+window.fbLoadAll = async function () {
+  if (!_db || !window._fbUid) return {};
+  try {
+    const colRef = collection(_db, 'users', window._fbUid, 'data');
+    const snap = await getDocs(colRef);
+    const result = {};
+    snap.forEach(docSnap => {
+      try {
+        result[docSnap.id] = JSON.parse(docSnap.data().v);
+      } catch (e) {
+        result[docSnap.id] = docSnap.data().v;
+      }
+    });
+    return result;
+  } catch (e) {
+    console.error('[Pinle] fbLoadAll error:', e);
+    return {};
+  }
+};
+
+/**
+ * Save Firebase config for a UID under _accounts/{uid}
+ * @param {Object} cfgData - { cfg, email, updatedAt }
+ */
+window.fbSaveConfig = async function (cfgData) {
+  if (!_db || !window._fbUid) return false;
+  try {
+    const ref = doc(_db, '_accounts', window._fbUid);
+    await setDoc(ref, cfgData);
+    return true;
+  } catch (e) {
+    console.error('[Pinle] fbSaveConfig error:', e);
+    return false;
+  }
+};
+
+/**
+ * Load Firebase config for current UID from _accounts/{uid}
+ * @returns {Object|null}
+ */
+window.fbLoadConfig = async function () {
+  if (!_db || !window._fbUid) return null;
+  try {
+    const ref = doc(_db, '_accounts', window._fbUid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) return snap.data();
+    return null;
+  } catch (e) {
+    console.error('[Pinle] fbLoadConfig error:', e);
+    return null;
+  }
+};
+
+/**
+ * Generate SHA-256 UID from email:password
+ * @param {string} email
+ * @param {string} password
+ * @returns {string} hex hash
+ */
+window.makeUID = async function (email, password) {
+  const msg = `${email.toLowerCase().trim()}:${password}`;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+  </script>
 </head>
 <body>
 
@@ -2023,6 +2152,7 @@ img { display: block; max-width: 100%; }
       <div class="topbar-right">
         <div class="streak-badge" id="streakBadge">🔥 0 gün serisi</div>
         <div class="email-status" id="emailStatus" title="E-posta bağlı değil" onclick="window.openEmailConfig()"></div>
+        <div id="sync-indicator" title="Firebase bağlı değil" style="font-size:14px;cursor:default;opacity:0.6"></div>
         <button class="btn btn-gold" id="btn-new-task">
           <span>+</span> Yeni Görev
         </button>
@@ -2597,137 +2727,9 @@ img { display: block; max-width: 100%; }
     </div>
   </div>
 
-  <script type="module">
-/* ============================================================
-   firebase-init.js — Firebase SDK init + helpers (ES Module)
-   ============================================================ */
-
-import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-
-// Built-in Firebase config (can be overridden by user config in localStorage)
-window._BUILTIN_FB_CFG = null;
-
-let _db = null;
-let _app = null;
-
-/**
- * Initialize Firebase with the given config object.
- * @param {Object} cfg - Firebase config { apiKey, authDomain, projectId, ... }
- */
-window.initFirebase = async function (cfg) {
-  try {
-    if (!cfg || !cfg.projectId) {
-      console.warn('[Pinle] Firebase config missing or invalid.');
-      return false;
-    }
-    // Avoid re-initializing if already done with same project
-    const existing = getApps().find(a => a.options.projectId === cfg.projectId);
-    if (existing) {
-      _app = existing;
-    } else {
-      _app = initializeApp(cfg, cfg.projectId + '_' + Date.now());
-    }
-    _db = getFirestore(_app);
-    window._fbReady = true;
-    console.log('[Pinle] Firebase initialized for project:', cfg.projectId);
-    return true;
-  } catch (e) {
-    console.error('[Pinle] Firebase init error:', e);
-    return false;
-  }
-};
-
-/**
- * Save a key-value pair under users/{uid}/data/{key}
- * @param {string} key
- * @param {*} value - Will be JSON.stringified
- */
-window.fbSave = async function (key, value) {
-  if (!_db || !window._fbUid) return false;
-  try {
-    const ref = doc(_db, 'users', window._fbUid, 'data', key);
-    await setDoc(ref, { v: JSON.stringify(value) });
-    return true;
-  } catch (e) {
-    console.error('[Pinle] fbSave error:', key, e);
-    return false;
-  }
-};
-
-/**
- * Load all keys from users/{uid}/data/
- * @returns {Object} map of key → parsed value
- */
-window.fbLoadAll = async function () {
-  if (!_db || !window._fbUid) return {};
-  try {
-    const colRef = collection(_db, 'users', window._fbUid, 'data');
-    const snap = await getDocs(colRef);
-    const result = {};
-    snap.forEach(docSnap => {
-      try {
-        result[docSnap.id] = JSON.parse(docSnap.data().v);
-      } catch (e) {
-        result[docSnap.id] = docSnap.data().v;
-      }
-    });
-    return result;
-  } catch (e) {
-    console.error('[Pinle] fbLoadAll error:', e);
-    return {};
-  }
-};
-
-/**
- * Save Firebase config for a UID under _accounts/{uid}
- * @param {Object} cfgData - { cfg, email, updatedAt }
- */
-window.fbSaveConfig = async function (cfgData) {
-  if (!_db || !window._fbUid) return false;
-  try {
-    const ref = doc(_db, '_accounts', window._fbUid);
-    await setDoc(ref, cfgData);
-    return true;
-  } catch (e) {
-    console.error('[Pinle] fbSaveConfig error:', e);
-    return false;
-  }
-};
-
-/**
- * Load Firebase config for current UID from _accounts/{uid}
- * @returns {Object|null}
- */
-window.fbLoadConfig = async function () {
-  if (!_db || !window._fbUid) return null;
-  try {
-    const ref = doc(_db, '_accounts', window._fbUid);
-    const snap = await getDoc(ref);
-    if (snap.exists()) return snap.data();
-    return null;
-  } catch (e) {
-    console.error('[Pinle] fbLoadConfig error:', e);
-    return null;
-  }
-};
-
-/**
- * Generate SHA-256 UID from email:password
- * @param {string} email
- * @param {string} password
- * @returns {string} hex hash
- */
-window.makeUID = async function (email, password) {
-  const msg = `${email.toLowerCase().trim()}:${password}`;
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
-</script>
-<script>
-/* === src/js/modules/config.js === */
+  <!-- ════════════ JS LOAD ORDER ════════════ -->
+  <script>
+/* === config.js === */
 /* ============================================================
    config.js — App constants, built-in EmailJS config
    ============================================================ */
@@ -2821,8 +2823,9 @@ window.CATEGORIES  = CATEGORIES;
 window.TASK_TEMPLATES  = TASK_TEMPLATES;
 window.KANBAN_COLS = KANBAN_COLS;
 
-
-/* === src/js/modules/state.js === */
+  </script>
+  <script>
+/* === state.js === */
 /* ============================================================
    state.js — Global application state + localStorage helpers
    ============================================================ */
@@ -2938,6 +2941,43 @@ function saveSchedule() {
   scheduleSync();
 }
 
+// ── Kullanıcı bazlı yedek kayıt/yükleme ─────────────────────
+const USER_KEYS = ['g_tasks','g_notes','g_notebooks','g_reminders','g_tracker','g_tracker_cols','g_schedule','g_fb_cfg'];
+
+function saveUserState() {
+  const uid = lsGet('g_uid', null);
+  if (!uid) return;
+  USER_KEYS.forEach(k => {
+    const val = localStorage.getItem(k);
+    if (val !== null) localStorage.setItem('u_' + uid + '_' + k, val);
+  });
+}
+
+function loadUserState() {
+  const uid = lsGet('g_uid', null);
+  if (!uid) return false;
+
+  // Kullanıcıya özel yedek var mı?
+  const hasUserBackup = USER_KEYS.some(k => localStorage.getItem('u_' + uid + '_' + k) !== null);
+
+  if (hasUserBackup) {
+    // Yedekten yükle — sadece içi dolu olanları
+    USER_KEYS.forEach(k => {
+      const val = localStorage.getItem('u_' + uid + '_' + k);
+      if (val !== null && val !== '{}' && val !== '[]' && val !== 'null') {
+        localStorage.setItem(k, val);
+      }
+    });
+  } else {
+    // Yedek yok — generic anahtarlardaki mevcut veriyi kullanıcıya ait say ve kaydet
+    USER_KEYS.forEach(k => {
+      const val = localStorage.getItem(k);
+      if (val !== null) localStorage.setItem('u_' + uid + '_' + k, val);
+    });
+  }
+  return true;
+}
+
 // ── Today string ─────────────────────────────────────────────
 function todayStr() {
   const d = new Date();
@@ -2955,10 +2995,340 @@ window.saveNotes    = saveNotes;
 window.saveReminders = saveReminders;
 window.saveTracker  = saveTracker;
 window.saveSchedule = saveSchedule;
+window.saveUserState = saveUserState;
+window.loadUserState = loadUserState;
 window.todayStr     = todayStr;
 
+  </script>
+  <script>
+/* === helpers.js === */
+/* ============================================================
+   helpers.js — Utility functions
+   ============================================================ */
 
-/* === src/js/modules/auth.js === */
+// ── Notifications ─────────────────────────────────────────────
+window.showNotif = function (icon, title, text, duration = 3500) {
+  const container = document.getElementById('notif-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = 'notif-toast';
+  toast.innerHTML = `
+    <span class="notif-icon">${icon}</span>
+    <div class="notif-content">
+      <div class="notif-title">${title}</div>
+      ${text ? `<div class="notif-text">${text}</div>` : ''}
+    </div>
+  `;
+  container.appendChild(toast);
+
+  const close = () => {
+    toast.classList.add('closing');
+    setTimeout(() => toast.remove(), 280);
+  };
+
+  toast.addEventListener('click', close);
+  setTimeout(close, duration);
+};
+
+// ── Confirm dialog (custom, no native confirm()) ──────────────
+window.showConfirm = function ({ icon = '⚠️', title, text, confirmText = 'Evet', cancelText = 'İptal', danger = false }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-modal">
+        <div class="confirm-icon">${icon}</div>
+        <div class="confirm-title">${title}</div>
+        <div class="confirm-text">${text}</div>
+        <div class="confirm-btns">
+          <button class="btn btn-ghost" id="conf-cancel">${cancelText}</button>
+          <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="conf-ok">${confirmText}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#conf-cancel').addEventListener('click', () => {
+      overlay.remove();
+      resolve(false);
+    });
+    overlay.querySelector('#conf-ok').addEventListener('click', () => {
+      overlay.remove();
+      resolve(true);
+    });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) { overlay.remove(); resolve(false); }
+    });
+  });
+};
+
+// ── Date formatting ───────────────────────────────────────────
+window.formatDate = function (dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const today = new Date();
+  const t = new Date(y, m - 1, d);
+  const diffDays = Math.round((t - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+  if (diffDays === 0) return 'Bugün';
+  if (diffDays === 1) return 'Yarın';
+  if (diffDays === -1) return 'Dün';
+  return `${d} ${MONTHS[m - 1]}`;
+};
+
+window.formatDateTime = function (dateStr, timeStr) {
+  const date = window.formatDate(dateStr);
+  return timeStr ? `${date} ${timeStr}` : date;
+};
+
+// ── Debounce ──────────────────────────────────────────────────
+window.debounce = function (fn, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+};
+
+// ── Streak calculator ─────────────────────────────────────────
+window.updateStreak = function () {
+  const tasks = window.g_tasks || [];
+  let streak = 0;
+  const today = new Date();
+
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const ds = d.toISOString().slice(0, 10);
+    const hasDone = tasks.some(t => t.date === ds && t.done);
+    if (hasDone) {
+      streak++;
+    } else if (i > 0) {
+      break;
+    }
+  }
+
+  const badge = document.getElementById('streakBadge');
+  if (badge) badge.textContent = `🔥 ${streak} gün serisi`;
+  return streak;
+};
+
+// ── Stats updater ─────────────────────────────────────────────
+window.updateStats = function () {
+  const tasks = window.g_tasks || [];
+  const notes = window.g_notes || [];
+  const todayS = window.todayStr();
+
+  const todayTasks   = tasks.filter(t => t.date === todayS);
+  const doneTasks    = tasks.filter(t => t.done);
+  const acilTasks    = tasks.filter(t => t.priority === 'yuksek' && !t.done);
+  const totalNotes   = notes.length;
+
+  const s = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  s('stat-today',  todayTasks.length);
+  s('stat-done',   doneTasks.length);
+  s('stat-acil',   acilTasks.length);
+  s('stat-notes',  totalNotes);
+
+  // Daily progress
+  const todayTotal = todayTasks.length;
+  const todayDone  = todayTasks.filter(t => t.done).length;
+  const pct = todayTotal > 0 ? Math.round((todayDone / todayTotal) * 100) : 0;
+  const pctEl = document.getElementById('progress-pct');
+  const barEl = document.getElementById('progress-bar');
+  if (pctEl) pctEl.textContent = `${pct}%`;
+  if (barEl) barEl.style.width = `${pct}%`;
+
+  // Nav counts
+  const todayCount  = document.getElementById('count-today');
+  const upcomingCount = document.getElementById('count-upcoming');
+  if (todayCount)    todayCount.textContent    = todayTasks.length;
+  if (upcomingCount) {
+    const upcoming = tasks.filter(t => t.date > todayS && !t.done);
+    upcomingCount.textContent = upcoming.length;
+  }
+
+  window.updateStreak();
+};
+
+// ── Nav counts for notebooks ──────────────────────────────────
+window.updateNavNotebooks = function () {
+  const list = document.getElementById('nav-notebooks-list');
+  if (!list) return;
+  list.innerHTML = '';
+  (window.g_notebooks || []).forEach(nb => {
+    const count = (window.g_notes || []).filter(n => n.notebook === nb).length;
+    const el = document.createElement('div');
+    el.className = 'nav-item' + (window._activeNotebook === nb ? ' active' : '');
+    el.dataset.nb = nb;
+    el.innerHTML = `<span class="nav-icon">📓</span><span>${nb}</span><span class="nav-count">${count}</span>`;
+    el.addEventListener('click', () => {
+      window._activeNotebook = nb;
+      window.setNav('notes', el);
+    });
+    list.appendChild(el);
+  });
+};
+
+// ── Search ────────────────────────────────────────────────────
+window.doSearch = function (q) {
+  q = q.toLowerCase().trim();
+  if (!q) {
+    window.setNav(window.curNav);
+    return;
+  }
+
+  const filtered = (window.g_tasks || []).filter(t =>
+    t.title.toLowerCase().includes(q) ||
+    (t.desc || '').toLowerCase().includes(q)
+  );
+
+  const container = document.getElementById('tasks-container');
+  const views = document.querySelectorAll('.view');
+  views.forEach(v => v.classList.remove('active'));
+  document.getElementById('view-list').classList.add('active');
+
+  if (!container) return;
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>Bulunamadı</h3><p>"${q}" için sonuç yok.</p></div>`;
+    return;
+  }
+  window._renderTaskCards(filtered, container);
+};
+
+// ── Close all dropdowns/menus on outside click ─────────────────
+document.addEventListener('click', (e) => {
+  // User dropdown
+  const udrop = document.getElementById('userDropdown');
+  const uavatar = document.getElementById('userAvatar');
+  if (udrop && !udrop.contains(e.target) && !uavatar.contains(e.target)) {
+    udrop.classList.remove('open');
+  }
+
+  // Context menus
+  document.querySelectorAll('.ctx-menu').forEach(m => m.remove());
+});
+
+// ── Escape key closes modals ──────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => {
+      m.classList.add('hidden');
+    });
+    document.querySelectorAll('.ctx-menu').forEach(m => m.remove());
+    const udrop = document.getElementById('userDropdown');
+    if (udrop) udrop.classList.remove('open');
+  }
+});
+
+// ── Mini Calendar ─────────────────────────────────────────────
+let _calYear  = new Date().getFullYear();
+let _calMonth = new Date().getMonth();
+
+window.renderMiniCal = function () {
+  const titleEl = document.getElementById('mini-cal-title');
+  const gridEl  = document.getElementById('mini-cal-grid');
+  if (!titleEl || !gridEl) return;
+
+  titleEl.textContent = `${MONTHS[_calMonth]} ${_calYear}`;
+  gridEl.innerHTML = '';
+
+  // Day name headers
+  DAYS.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'mini-cal-day-name';
+    el.textContent = d;
+    gridEl.appendChild(el);
+  });
+
+  const firstDay = new Date(_calYear, _calMonth, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const daysInPrev  = new Date(_calYear, _calMonth, 0).getDate();
+  const todayS = window.todayStr();
+  const taskDates = new Set((window.g_tasks || []).map(t => t.date));
+
+  // Padding prev month
+  for (let i = 0; i < firstDay; i++) {
+    const d = daysInPrev - firstDay + 1 + i;
+    const el = createCalCell(d, _calYear, _calMonth - 1, todayS, taskDates, true);
+    gridEl.appendChild(el);
+  }
+
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const el = createCalCell(d, _calYear, _calMonth, todayS, taskDates, false);
+    gridEl.appendChild(el);
+  }
+
+  // Padding next month
+  const total = firstDay + daysInMonth;
+  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= remaining; d++) {
+    const el = createCalCell(d, _calYear, _calMonth + 1, todayS, taskDates, true);
+    gridEl.appendChild(el);
+  }
+};
+
+function createCalCell(day, year, month, todayS, taskDates, otherMonth) {
+  const el = document.createElement('div');
+  el.className = 'mini-cal-cell';
+  el.textContent = day;
+
+  const m = ((month % 12) + 12) % 12;
+  const y = year + Math.floor(month / 12);
+  const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+  if (ds === todayS) el.classList.add('today');
+  if (taskDates.has(ds)) el.classList.add('has-tasks');
+  if (otherMonth) el.classList.add('other-month');
+
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.mini-cal-cell.selected').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    window.setNav('today');
+  });
+  return el;
+}
+
+document.getElementById('mini-cal-prev')?.addEventListener('click', () => {
+  _calMonth--;
+  if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+  window.renderMiniCal();
+});
+document.getElementById('mini-cal-next')?.addEventListener('click', () => {
+  _calMonth++;
+  if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+  window.renderMiniCal();
+});
+
+// ── Topbar search ─────────────────────────────────────────────
+const searchInput = document.getElementById('topbar-search');
+if (searchInput) {
+  searchInput.addEventListener('input', window.debounce(e => {
+    window.doSearch(e.target.value);
+  }, 300));
+}
+
+// ── User avatar/dropdown ──────────────────────────────────────
+const userAvatar   = document.getElementById('userAvatar');
+const userDropdown = document.getElementById('userDropdown');
+if (userAvatar && userDropdown) {
+  userAvatar.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown.classList.toggle('open');
+  });
+}
+
+// ── Open settings from dropdown ────────────────────────────────
+window.openSettings = function () {
+  document.getElementById('userDropdown')?.classList.remove('open');
+  document.getElementById('modal-email-cfg')?.classList.remove('hidden');
+  if (typeof window.openEmailConfig === 'function') window.openEmailConfig();
+};
+
+  </script>
+  <script>
+/* === auth.js === */
 /* ============================================================
    auth.js — Login / Register / Session management
    ============================================================ */
@@ -3109,6 +3479,8 @@ window.todayStr     = todayStr;
   function hideLogin() {
     // Store UID
     if (window._fbUid) lsSet('g_uid', window._fbUid);
+    // Kullanıcıya özel veriyi yükle (Firebase yoksa localStorage yedekten)
+    if (typeof window.loadUserState === 'function') window.loadUserState();
     loginScreen.style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     // Init app
@@ -3117,6 +3489,8 @@ window.todayStr     = todayStr;
 
   // ── Logout ────────────────────────────────────────────────
   window.doLogout = function () {
+    // Çıkmadan önce kullanıcı verisini UID altında yedekle
+    if (typeof window.saveUserState === 'function') window.saveUserState();
     lsDel('g_user');
     lsDel('g_remember');
     lsDel('g_uid');
@@ -3148,8 +3522,9 @@ window.todayStr     = todayStr;
   checkSession();
 })();
 
-
-/* === src/js/modules/email.js === */
+  </script>
+  <script>
+/* === email.js === */
 /* ============================================================
    email.js — EmailJS integration + reminder checking
    ============================================================ */
@@ -3356,8 +3731,9 @@ window.todayStr     = todayStr;
   };
 })();
 
-
-/* === src/js/modules/init.js === */
+  </script>
+  <script>
+/* === init.js === */
 /* ============================================================
    init.js — App initialization after login
    ============================================================ */
@@ -3417,6 +3793,11 @@ window.initApp = function () {
   // 10. Update nav notebooks
   window.updateNavNotebooks();
 
+  // Sayfa kapanırken kullanıcı verisini yedekle
+  window.addEventListener('beforeunload', () => {
+    if (typeof window.saveUserState === 'function') window.saveUserState();
+  });
+
   console.log('[Pinle] App initialized.');
 };
 
@@ -3457,10 +3838,10 @@ document.getElementById('btn-templates')?.addEventListener('click', window.openT
 document.getElementById('btn-fb-cfg')?.addEventListener('click', window.openFirebaseConfig);
 
 // ── Email config save ─────────────────────────────────────────
-document.getElementById('btn-save-email-cfg')?.addEventListener('click', window.saveEmailConfig);
+document.getElementById('btn-save-email-cfg')?.addEventListener('click', () => window.saveEmailConfig());
 
 // ── Firebase config save ──────────────────────────────────────
-document.getElementById('btn-save-fb-cfg')?.addEventListener('click', window.saveFirebaseConfig);
+document.getElementById('btn-save-fb-cfg')?.addEventListener('click', () => window.saveFirebaseConfig());
 
 // ── Task modal save ───────────────────────────────────────────
 document.getElementById('btn-save-task')?.addEventListener('click', window.saveTask_modal);
@@ -3485,8 +3866,9 @@ document.getElementById('btn-open-fb')?.addEventListener('click', () => {
   window.openFirebaseConfig();
 });
 
-
-/* === src/js/modules/navigation.js === */
+  </script>
+  <script>
+/* === navigation.js === */
 /* ============================================================
    navigation.js — View routing and nav menu
    ============================================================ */
@@ -3566,8 +3948,9 @@ document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
   });
 });
 
-
-/* === src/js/modules/tasks.js === */
+  </script>
+  <script>
+/* === tasks.js === */
 /* ============================================================
    tasks.js — Task CRUD + render (list, kanban, weekly)
    ============================================================ */
@@ -4046,8 +4429,9 @@ function escHtml(s) {
 }
 window.escHtml = escHtml;
 
-
-/* === src/js/modules/notes.js === */
+  </script>
+  <script>
+/* === notes.js === */
 /* ============================================================
    notes.js — Notes CRUD + rich text editor
    ============================================================ */
@@ -4390,8 +4774,9 @@ window.escHtml = escHtml;
   }
 })();
 
-
-/* === src/js/modules/tracker.js === */
+  </script>
+  <script>
+/* === tracker.js === */
 /* ============================================================
    tracker.js — Monthly habit tracker
    ============================================================ */
@@ -4849,8 +5234,9 @@ window.escHtml = escHtml;
   };
 })();
 
-
-/* === src/js/modules/schedule.js === */
+  </script>
+  <script>
+/* === schedule.js === */
 /* ============================================================
    schedule.js — Daily & Weekly work schedule
    ============================================================ */
@@ -5209,334 +5595,9 @@ window.escHtml = escHtml;
 
 })();
 
-
-/* === src/js/modules/helpers.js === */
-/* ============================================================
-   helpers.js — Utility functions
-   ============================================================ */
-
-// ── Notifications ─────────────────────────────────────────────
-window.showNotif = function (icon, title, text, duration = 3500) {
-  const container = document.getElementById('notif-container');
-  if (!container) return;
-
-  const toast = document.createElement('div');
-  toast.className = 'notif-toast';
-  toast.innerHTML = `
-    <span class="notif-icon">${icon}</span>
-    <div class="notif-content">
-      <div class="notif-title">${title}</div>
-      ${text ? `<div class="notif-text">${text}</div>` : ''}
-    </div>
-  `;
-  container.appendChild(toast);
-
-  const close = () => {
-    toast.classList.add('closing');
-    setTimeout(() => toast.remove(), 280);
-  };
-
-  toast.addEventListener('click', close);
-  setTimeout(close, duration);
-};
-
-// ── Confirm dialog (custom, no native confirm()) ──────────────
-window.showConfirm = function ({ icon = '⚠️', title, text, confirmText = 'Evet', cancelText = 'İptal', danger = false }) {
-  return new Promise((resolve) => {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-      <div class="confirm-modal">
-        <div class="confirm-icon">${icon}</div>
-        <div class="confirm-title">${title}</div>
-        <div class="confirm-text">${text}</div>
-        <div class="confirm-btns">
-          <button class="btn btn-ghost" id="conf-cancel">${cancelText}</button>
-          <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="conf-ok">${confirmText}</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-
-    overlay.querySelector('#conf-cancel').addEventListener('click', () => {
-      overlay.remove();
-      resolve(false);
-    });
-    overlay.querySelector('#conf-ok').addEventListener('click', () => {
-      overlay.remove();
-      resolve(true);
-    });
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) { overlay.remove(); resolve(false); }
-    });
-  });
-};
-
-// ── Date formatting ───────────────────────────────────────────
-window.formatDate = function (dateStr) {
-  if (!dateStr) return '';
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const today = new Date();
-  const t = new Date(y, m - 1, d);
-  const diffDays = Math.round((t - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
-  if (diffDays === 0) return 'Bugün';
-  if (diffDays === 1) return 'Yarın';
-  if (diffDays === -1) return 'Dün';
-  return `${d} ${MONTHS[m - 1]}`;
-};
-
-window.formatDateTime = function (dateStr, timeStr) {
-  const date = window.formatDate(dateStr);
-  return timeStr ? `${date} ${timeStr}` : date;
-};
-
-// ── Debounce ──────────────────────────────────────────────────
-window.debounce = function (fn, delay) {
-  let timer;
-  return function (...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn.apply(this, args), delay);
-  };
-};
-
-// ── Streak calculator ─────────────────────────────────────────
-window.updateStreak = function () {
-  const tasks = window.g_tasks || [];
-  let streak = 0;
-  const today = new Date();
-
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const ds = d.toISOString().slice(0, 10);
-    const hasDone = tasks.some(t => t.date === ds && t.done);
-    if (hasDone) {
-      streak++;
-    } else if (i > 0) {
-      break;
-    }
-  }
-
-  const badge = document.getElementById('streakBadge');
-  if (badge) badge.textContent = `🔥 ${streak} gün serisi`;
-  return streak;
-};
-
-// ── Stats updater ─────────────────────────────────────────────
-window.updateStats = function () {
-  const tasks = window.g_tasks || [];
-  const notes = window.g_notes || [];
-  const todayS = window.todayStr();
-
-  const todayTasks   = tasks.filter(t => t.date === todayS);
-  const doneTasks    = tasks.filter(t => t.done);
-  const acilTasks    = tasks.filter(t => t.priority === 'yuksek' && !t.done);
-  const totalNotes   = notes.length;
-
-  const s = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  s('stat-today',  todayTasks.length);
-  s('stat-done',   doneTasks.length);
-  s('stat-acil',   acilTasks.length);
-  s('stat-notes',  totalNotes);
-
-  // Daily progress
-  const todayTotal = todayTasks.length;
-  const todayDone  = todayTasks.filter(t => t.done).length;
-  const pct = todayTotal > 0 ? Math.round((todayDone / todayTotal) * 100) : 0;
-  const pctEl = document.getElementById('progress-pct');
-  const barEl = document.getElementById('progress-bar');
-  if (pctEl) pctEl.textContent = `${pct}%`;
-  if (barEl) barEl.style.width = `${pct}%`;
-
-  // Nav counts
-  const todayCount  = document.getElementById('count-today');
-  const upcomingCount = document.getElementById('count-upcoming');
-  if (todayCount)    todayCount.textContent    = todayTasks.length;
-  if (upcomingCount) {
-    const upcoming = tasks.filter(t => t.date > todayS && !t.done);
-    upcomingCount.textContent = upcoming.length;
-  }
-
-  window.updateStreak();
-};
-
-// ── Nav counts for notebooks ──────────────────────────────────
-window.updateNavNotebooks = function () {
-  const list = document.getElementById('nav-notebooks-list');
-  if (!list) return;
-  list.innerHTML = '';
-  (window.g_notebooks || []).forEach(nb => {
-    const count = (window.g_notes || []).filter(n => n.notebook === nb).length;
-    const el = document.createElement('div');
-    el.className = 'nav-item' + (window._activeNotebook === nb ? ' active' : '');
-    el.dataset.nb = nb;
-    el.innerHTML = `<span class="nav-icon">📓</span><span>${nb}</span><span class="nav-count">${count}</span>`;
-    el.addEventListener('click', () => {
-      window._activeNotebook = nb;
-      window.setNav('notes', el);
-    });
-    list.appendChild(el);
-  });
-};
-
-// ── Search ────────────────────────────────────────────────────
-window.doSearch = function (q) {
-  q = q.toLowerCase().trim();
-  if (!q) {
-    window.setNav(window.curNav);
-    return;
-  }
-
-  const filtered = (window.g_tasks || []).filter(t =>
-    t.title.toLowerCase().includes(q) ||
-    (t.desc || '').toLowerCase().includes(q)
-  );
-
-  const container = document.getElementById('tasks-container');
-  const views = document.querySelectorAll('.view');
-  views.forEach(v => v.classList.remove('active'));
-  document.getElementById('view-list').classList.add('active');
-
-  if (!container) return;
-  if (filtered.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>Bulunamadı</h3><p>"${q}" için sonuç yok.</p></div>`;
-    return;
-  }
-  window._renderTaskCards(filtered, container);
-};
-
-// ── Close all dropdowns/menus on outside click ─────────────────
-document.addEventListener('click', (e) => {
-  // User dropdown
-  const udrop = document.getElementById('userDropdown');
-  const uavatar = document.getElementById('userAvatar');
-  if (udrop && !udrop.contains(e.target) && !uavatar.contains(e.target)) {
-    udrop.classList.remove('open');
-  }
-
-  // Context menus
-  document.querySelectorAll('.ctx-menu').forEach(m => m.remove());
-});
-
-// ── Escape key closes modals ──────────────────────────────────
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => {
-      m.classList.add('hidden');
-    });
-    document.querySelectorAll('.ctx-menu').forEach(m => m.remove());
-    const udrop = document.getElementById('userDropdown');
-    if (udrop) udrop.classList.remove('open');
-  }
-});
-
-// ── Mini Calendar ─────────────────────────────────────────────
-let _calYear  = new Date().getFullYear();
-let _calMonth = new Date().getMonth();
-
-window.renderMiniCal = function () {
-  const titleEl = document.getElementById('mini-cal-title');
-  const gridEl  = document.getElementById('mini-cal-grid');
-  if (!titleEl || !gridEl) return;
-
-  titleEl.textContent = `${MONTHS[_calMonth]} ${_calYear}`;
-  gridEl.innerHTML = '';
-
-  // Day name headers
-  DAYS.forEach(d => {
-    const el = document.createElement('div');
-    el.className = 'mini-cal-day-name';
-    el.textContent = d;
-    gridEl.appendChild(el);
-  });
-
-  const firstDay = new Date(_calYear, _calMonth, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
-  const daysInPrev  = new Date(_calYear, _calMonth, 0).getDate();
-  const todayS = window.todayStr();
-  const taskDates = new Set((window.g_tasks || []).map(t => t.date));
-
-  // Padding prev month
-  for (let i = 0; i < firstDay; i++) {
-    const d = daysInPrev - firstDay + 1 + i;
-    const el = createCalCell(d, _calYear, _calMonth - 1, todayS, taskDates, true);
-    gridEl.appendChild(el);
-  }
-
-  // Current month days
-  for (let d = 1; d <= daysInMonth; d++) {
-    const el = createCalCell(d, _calYear, _calMonth, todayS, taskDates, false);
-    gridEl.appendChild(el);
-  }
-
-  // Padding next month
-  const total = firstDay + daysInMonth;
-  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
-  for (let d = 1; d <= remaining; d++) {
-    const el = createCalCell(d, _calYear, _calMonth + 1, todayS, taskDates, true);
-    gridEl.appendChild(el);
-  }
-};
-
-function createCalCell(day, year, month, todayS, taskDates, otherMonth) {
-  const el = document.createElement('div');
-  el.className = 'mini-cal-cell';
-  el.textContent = day;
-
-  const m = ((month % 12) + 12) % 12;
-  const y = year + Math.floor(month / 12);
-  const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-  if (ds === todayS) el.classList.add('today');
-  if (taskDates.has(ds)) el.classList.add('has-tasks');
-  if (otherMonth) el.classList.add('other-month');
-
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.mini-cal-cell.selected').forEach(c => c.classList.remove('selected'));
-    el.classList.add('selected');
-    window.setNav('today');
-  });
-  return el;
-}
-
-document.getElementById('mini-cal-prev')?.addEventListener('click', () => {
-  _calMonth--;
-  if (_calMonth < 0) { _calMonth = 11; _calYear--; }
-  window.renderMiniCal();
-});
-document.getElementById('mini-cal-next')?.addEventListener('click', () => {
-  _calMonth++;
-  if (_calMonth > 11) { _calMonth = 0; _calYear++; }
-  window.renderMiniCal();
-});
-
-// ── Topbar search ─────────────────────────────────────────────
-const searchInput = document.getElementById('topbar-search');
-if (searchInput) {
-  searchInput.addEventListener('input', window.debounce(e => {
-    window.doSearch(e.target.value);
-  }, 300));
-}
-
-// ── User avatar/dropdown ──────────────────────────────────────
-const userAvatar   = document.getElementById('userAvatar');
-const userDropdown = document.getElementById('userDropdown');
-if (userAvatar && userDropdown) {
-  userAvatar.addEventListener('click', (e) => {
-    e.stopPropagation();
-    userDropdown.classList.toggle('open');
-  });
-}
-
-// ── Open settings from dropdown ────────────────────────────────
-window.openSettings = function () {
-  document.getElementById('userDropdown')?.classList.remove('open');
-  document.getElementById('modal-email-cfg')?.classList.remove('hidden');
-  if (typeof window.openEmailConfig === 'function') window.openEmailConfig();
-};
-
-
-/* === src/js/modules/firebase.js === */
+  </script>
+  <script>
+/* === firebase.js === */
 /* ============================================================
    firebase.js — Sync orchestration (offline-first)
    ============================================================ */
@@ -5557,6 +5618,8 @@ window.scheduleSync = function () {
  */
 async function syncToFirebase() {
   if (!window._fbReady || !window._fbUid) return;
+  const indicator = document.getElementById('sync-indicator');
+  if (indicator) { indicator.textContent = '🔄'; indicator.title = 'Senkronize ediliyor…'; }
   try {
     await Promise.all([
       window.fbSave('g_tasks',        window.g_tasks),
@@ -5564,10 +5627,13 @@ async function syncToFirebase() {
       window.fbSave('g_notebooks',    window.g_notebooks),
       window.fbSave('g_reminders',    window.g_reminders),
       window.fbSave('g_tracker',      window.g_tracker),
-      window.fbSave('g_tracker_cols', window.g_tracker_cols)
+      window.fbSave('g_tracker_cols', window.g_tracker_cols),
+      window.fbSave('g_schedule',     window.g_schedule)
     ]);
+    if (indicator) { indicator.textContent = '✅'; indicator.title = 'Yedeklendi'; }
     console.log('[Pinle] Synced to Firebase.');
   } catch (e) {
+    if (indicator) { indicator.textContent = '⚠️'; indicator.title = 'Senkronizasyon hatası: ' + e.message; }
     console.warn('[Pinle] Sync failed (offline?):', e.message);
   }
 }
@@ -5585,6 +5651,7 @@ window.loadFromFirebase = async function () {
     if (all.g_reminders)    { lsSet('g_reminders',    all.g_reminders);    window.g_reminders    = all.g_reminders; }
     if (all.g_tracker)      { lsSet('g_tracker',      all.g_tracker);      window.g_tracker      = all.g_tracker; }
     if (all.g_tracker_cols) { lsSet('g_tracker_cols', all.g_tracker_cols); window.g_tracker_cols = all.g_tracker_cols; }
+    if (all.g_schedule)     { lsSet('g_schedule',     all.g_schedule);     window.g_schedule     = all.g_schedule; }
     console.log('[Pinle] Loaded from Firebase.');
   } catch (e) {
     console.warn('[Pinle] Load from Firebase failed:', e.message);
@@ -5637,8 +5704,7 @@ window.saveFirebaseConfig = async function () {
   }
 };
 
+  </script>
 
-
-</script>
 </body>
 </html>
