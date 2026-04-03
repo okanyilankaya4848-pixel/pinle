@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pinle — Görev & Not Yöneticisi</title>
+  <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iIzBmMGYxMSIvPgogIDxwYXRoIGQ9Ik0xNiA0IEMxMyA0IDEwIDcgMTAgMTAuNSBDMTAgMTUgMTYgMjIgMTYgMjIgQzE2IDIyIDIyIDE1IDIyIDEwLjUgQzIyIDcgMTkgNCAxNiA0WiIgZmlsbD0iI2Q0YTg1MyIvPgogIDxjaXJjbGUgY3g9IjE2IiBjeT0iMTAuNSIgcj0iMyIgZmlsbD0iIzBmMGYxMSIvPgogIDxsaW5lIHgxPSIxNiIgeTE9IjIyIiB4Mj0iMTYiIHkyPSIyOCIgc3Ryb2tlPSIjZDRhODUzIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K" type="image/svg+xml">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
 /* ============================================================
@@ -1873,7 +1879,7 @@ img { display: block; max-width: 100%; }
 .template-card .t-name { font-size: 13px; font-weight: 600; color: var(--text); }
 .template-card .t-desc { font-size: 11px; color: var(--text3); margin-top: 3px; }
 
-/* ── Config Sections ────────────────────────────────────────── */
+/* ── Firebase Config Modal ─────────────────────────────────── */
 .cfg-section {
   background: var(--s2);
   border: 1px solid var(--border);
@@ -1957,6 +1963,7 @@ img { display: block; max-width: 100%; }
   </style>
 
   <script type="module">
+/* === firebase-init.js === */
 /* ============================================================
    firebase-init.js — Firebase SDK init + helpers (ES Module)
    ============================================================ */
@@ -2481,238 +2488,6 @@ window.makeUID = async function (email, password) {
   <!-- Notifications -->
   <div id="notif-container"></div>
 
-  <!-- ════════════ MODALS ════════════ -->
-
-  <!-- Task Modal -->
-  <div class="modal-overlay hidden" id="modal-task">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title" id="task-modal-title-el">Yeni Görev</h3>
-        <button class="modal-close" data-close-modal="modal-task">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Başlık *</label>
-          <input id="t-title" class="form-input" type="text" placeholder="Görev başlığı">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Notlar</label>
-          <textarea id="t-desc" class="form-textarea" placeholder="Açıklama..."></textarea>
-        </div>
-        <div class="form-row">
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Tarih *</label>
-            <input id="t-date" class="form-input" type="date">
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Saat</label>
-            <input id="t-time" class="form-input" type="time">
-          </div>
-        </div>
-        <div class="form-group" style="margin-top:16px;">
-          <label class="form-label">Öncelik</label>
-          <div class="priority-btns">
-            <button class="priority-btn" data-priority="yuksek">🔴 Yüksek</button>
-            <button class="priority-btn active-orta" data-priority="orta">🟠 Orta</button>
-            <button class="priority-btn" data-priority="dusuk">🟢 Düşük</button>
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:4px;">
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Tekrar</label>
-            <select id="t-repeat" class="form-select">
-              <option value="none">Tekrarsız</option>
-              <option value="daily">Her gün</option>
-              <option value="weekdays">Hafta içi</option>
-              <option value="weekly">Haftalık</option>
-              <option value="monthly">Aylık</option>
-              <option value="yearly">Yıllık</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Kategori</label>
-            <select id="t-category" class="form-select">
-              <option value="">— Seç —</option>
-              <option>İş</option>
-              <option>Kişisel</option>
-              <option>Toplantı</option>
-              <option>Sağlık</option>
-              <option>Eğitim</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group" style="margin-top:16px;">
-          <label class="form-label">Kanban Durumu</label>
-          <select id="t-kanban-status" class="form-select">
-            <option value="bekliyor">Bekliyor</option>
-            <option value="devam">Devam Ediyor</option>
-            <option value="tamamlandi">Tamamlandı</option>
-          </select>
-        </div>
-        <div class="toggle-row">
-          <span class="toggle-label">✉️ E-posta bildirimi</span>
-          <label class="toggle">
-            <input type="checkbox" id="t-email-toggle">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div id="t-email-row" style="display:none;" class="form-group">
-          <label class="form-label">Bildirim e-postası</label>
-          <input id="t-email-to" class="form-input" type="email" placeholder="ornek@email.com">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" data-close-modal="modal-task">İptal</button>
-        <button class="btn btn-gold" id="btn-save-task">Kaydet</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Templates Modal -->
-  <div class="modal-overlay hidden" id="modal-templates">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3 class="modal-title">📋 Şablonlar</h3>
-        <button class="modal-close" data-close-modal="modal-templates">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="templates-grid" id="templates-grid"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Email Config Modal -->
-  <div class="modal-overlay hidden" id="modal-email-cfg">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title">✉️ E-posta Ayarları</h3>
-        <button class="modal-close" data-close-modal="modal-email-cfg">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="cfg-section" style="margin-bottom:16px;">
-          <div class="cfg-section-title">Tema</div>
-          <div class="theme-picker" id="theme-picker"></div>
-        </div>
-        <div style="border-top:1px solid var(--border);margin-bottom:16px;"></div>
-        <div class="cfg-section">
-          <div class="cfg-section-title">Hatırlatma Saatleri (en fazla 3)</div>
-          <div class="form-row-3">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Saat 1</label>
-              <input id="ecfg-time1" class="form-input" type="time">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Saat 2</label>
-              <input id="ecfg-time2" class="form-input" type="time">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Saat 3</label>
-              <input id="ecfg-time3" class="form-input" type="time">
-            </div>
-          </div>
-        </div>
-        <div class="cfg-section" style="margin-top:12px;">
-          <div class="cfg-section-title">E-posta Bildirimleri</div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Bildirim Gönderilecek E-posta</label>
-            <input id="ecfg-to" class="form-input" type="email" placeholder="ornek@email.com">
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" data-close-modal="modal-email-cfg">İptal</button>
-        <button class="btn btn-gold" id="btn-save-email-cfg">Kaydet</button>
-      </div>
-    </div>
-  </div>
-
-
-
-  <!-- Add Tracker Column Modal -->
-  <div class="modal-overlay hidden" id="modal-add-col">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3 class="modal-title" id="add-col-title">Yeni Alışkanlık</h3>
-        <button class="modal-close" data-close-modal="modal-add-col">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Emoji</label>
-          <input id="col-emoji-input" class="form-input" type="text" maxlength="2" placeholder="✅"
-                 style="width:60px;text-align:center;font-size:18px;">
-          <div class="emoji-pick-row" id="emoji-picker"></div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Alışkanlık Adı</label>
-          <input id="col-name-input" class="form-input" type="text" placeholder="Örn: Egzersiz, Okuma...">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" data-close-modal="modal-add-col">İptal</button>
-        <button class="btn btn-gold" id="btn-save-col">Kaydet</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Schedule Block Modal -->
-  <div class="modal-overlay hidden" id="modal-block">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3 class="modal-title" id="block-modal-title">Yeni Blok</h3>
-        <button class="modal-close" data-close-modal="modal-block">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Başlık *</label>
-          <input type="text" id="block-title" class="form-input" placeholder="Toplantı, Geliştirme…">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Başlangıç</label>
-            <input type="time" id="block-start" class="form-input" value="09:00">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Bitiş</label>
-            <input type="time" id="block-end" class="form-input" value="10:00">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Tür</label>
-          <div class="block-type-btns" id="block-type-btns">
-            <button class="block-type-btn active" data-type="odak">🎯 Odak</button>
-            <button class="block-type-btn" data-type="toplanti">🤝 Toplantı</button>
-            <button class="block-type-btn" data-type="review">👁 Review</button>
-            <button class="block-type-btn" data-type="mola">☕ Mola</button>
-            <button class="block-type-btn" data-type="serbest">📌 Serbest</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Görev Bağla (opsiyonel)</label>
-          <select id="block-task" class="form-input">
-            <option value="">— Görev seçme —</option>
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" id="btn-delete-block" style="margin-right:auto;display:none">🗑 Sil</button>
-        <button class="btn btn-ghost" data-close-modal="modal-block">İptal</button>
-        <button class="btn btn-gold" id="btn-save-block">Kaydet</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Day Detail Modal -->
-  <div class="modal-overlay hidden" id="modal-day-detail">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title" id="day-detail-title"></h3>
-        <button class="modal-close" data-close-modal="modal-day-detail">✕</button>
-      </div>
-      <div class="modal-body" id="day-detail-body"></div>
-    </div>
-  </div>
-
-  <!-- ════════════ JS LOAD ORDER ════════════ -->
   <script>
 /* === config.js === */
 /* ============================================================
@@ -2877,90 +2652,85 @@ function lsDel(key) {
   localStorage.removeItem(key);
 }
 
+// ── Kullanıcı prefix yardımcısı ─────────────────────────────
+// Giriş yapmış kullanıcının UID'sine göre localStorage anahtarı üretir.
+// Örnek: uid="abc" → "u_abc_"
+// UID yoksa boş string döner → generic anahtarlar kullanılır.
+function userPrefix() {
+  const uid = lsGet('g_uid', null);
+  return uid ? 'u_' + uid + '_' : '';
+}
+
+// ── Kullanıcı bazlı anahtarlar ───────────────────────────────
+const USER_DATA_KEYS = ['g_tasks', 'g_notes', 'g_notebooks', 'g_reminders',
+                        'g_tracker', 'g_tracker_cols', 'g_schedule'];
+
 // ── Load state from localStorage ────────────────────────────
 function loadState() {
-  window.g_tasks        = lsGet('g_tasks', []);
-  window.g_notes        = lsGet('g_notes', []);
-  window.g_notebooks    = lsGet('g_notebooks', ['Kişisel', 'İş', 'Fikirler']);
-  window.g_reminders    = lsGet('g_reminders', { times: [], tasks: [] });
-  window.g_emailCfg     = lsGet('g_email', null);
+  const pfx = userPrefix();
+
+  // Tek seferlik veri taşıma: eski generic anahtarlardan kullanıcı prefix'ine geç.
+  // Eğer kullanıcıya özel hiç veri yoksa generic anahtarlardaki veriyi kopyala.
+  if (pfx) {
+    const hasUserData = USER_DATA_KEYS.some(
+      k => localStorage.getItem(pfx + k) !== null
+    );
+    if (!hasUserData) {
+      USER_DATA_KEYS.forEach(k => {
+        const val = localStorage.getItem(k);
+        if (val !== null) localStorage.setItem(pfx + k, val);
+      });
+      console.log('[Pinle] Veri kullanıcı anahtarlarına taşındı:', pfx);
+    }
+  }
+
+  window.g_tasks        = lsGet(pfx + 'g_tasks', []);
+  window.g_notes        = lsGet(pfx + 'g_notes', []);
+  window.g_notebooks    = lsGet(pfx + 'g_notebooks', ['Kişisel', 'İş', 'Fikirler']);
+  window.g_reminders    = lsGet(pfx + 'g_reminders', { times: [], tasks: [] });
+  window.g_emailCfg     = lsGet('g_email', null);  // e-posta ayarı cihaza özel
   window.g_user         = lsGet('g_user', null);
-  window.g_tracker      = lsGet('g_tracker', {});
-  window.g_tracker_cols = lsGet('g_tracker_cols', []);
-  window.g_schedule     = lsGet('g_schedule', {});
+  window.g_tracker      = lsGet(pfx + 'g_tracker', {});
+  window.g_tracker_cols = lsGet(pfx + 'g_tracker_cols', []);
+  window.g_schedule     = lsGet(pfx + 'g_schedule', {});
 }
 
 // ── Save state to localStorage ───────────────────────────────
 function saveState() {
-  lsSet('g_tasks',        window.g_tasks);
-  lsSet('g_notes',        window.g_notes);
-  lsSet('g_notebooks',    window.g_notebooks);
-  lsSet('g_reminders',    window.g_reminders);
-  lsSet('g_email',        window.g_emailCfg);
-  lsSet('g_tracker',      window.g_tracker);
-  lsSet('g_tracker_cols', window.g_tracker_cols);
+  const pfx = userPrefix();
+  lsSet(pfx + 'g_tasks',        window.g_tasks);
+  lsSet(pfx + 'g_notes',        window.g_notes);
+  lsSet(pfx + 'g_notebooks',    window.g_notebooks);
+  lsSet(pfx + 'g_reminders',    window.g_reminders);
+  lsSet('g_email',              window.g_emailCfg);
+  lsSet(pfx + 'g_tracker',      window.g_tracker);
+  lsSet(pfx + 'g_tracker_cols', window.g_tracker_cols);
   scheduleSync();
 }
 
 function saveTask() {
-  lsSet('g_tasks', window.g_tasks);
+  lsSet(userPrefix() + 'g_tasks', window.g_tasks);
   scheduleSync();
 }
 function saveNotes() {
-  lsSet('g_notes',     window.g_notes);
-  lsSet('g_notebooks', window.g_notebooks);
+  const pfx = userPrefix();
+  lsSet(pfx + 'g_notes',     window.g_notes);
+  lsSet(pfx + 'g_notebooks', window.g_notebooks);
   scheduleSync();
 }
 function saveReminders() {
-  lsSet('g_reminders', window.g_reminders);
+  lsSet(userPrefix() + 'g_reminders', window.g_reminders);
   scheduleSync();
 }
 function saveTracker() {
-  lsSet('g_tracker',      window.g_tracker);
-  lsSet('g_tracker_cols', window.g_tracker_cols);
+  const pfx = userPrefix();
+  lsSet(pfx + 'g_tracker',      window.g_tracker);
+  lsSet(pfx + 'g_tracker_cols', window.g_tracker_cols);
   scheduleSync();
 }
-
 function saveSchedule() {
-  lsSet('g_schedule', window.g_schedule);
+  lsSet(userPrefix() + 'g_schedule', window.g_schedule);
   scheduleSync();
-}
-
-// ── Kullanıcı bazlı yedek kayıt/yükleme ─────────────────────
-const USER_KEYS = ['g_tasks','g_notes','g_notebooks','g_reminders','g_tracker','g_tracker_cols','g_schedule','g_fb_cfg'];
-
-function saveUserState() {
-  const uid = lsGet('g_uid', null);
-  if (!uid) return;
-  USER_KEYS.forEach(k => {
-    const val = localStorage.getItem(k);
-    if (val !== null) localStorage.setItem('u_' + uid + '_' + k, val);
-  });
-}
-
-function loadUserState() {
-  const uid = lsGet('g_uid', null);
-  if (!uid) return false;
-
-  // Kullanıcıya özel yedek var mı?
-  const hasUserBackup = USER_KEYS.some(k => localStorage.getItem('u_' + uid + '_' + k) !== null);
-
-  if (hasUserBackup) {
-    // Yedekten yükle — sadece içi dolu olanları
-    USER_KEYS.forEach(k => {
-      const val = localStorage.getItem('u_' + uid + '_' + k);
-      if (val !== null && val !== '{}' && val !== '[]' && val !== 'null') {
-        localStorage.setItem(k, val);
-      }
-    });
-  } else {
-    // Yedek yok — generic anahtarlardaki mevcut veriyi kullanıcıya ait say ve kaydet
-    USER_KEYS.forEach(k => {
-      const val = localStorage.getItem(k);
-      if (val !== null) localStorage.setItem('u_' + uid + '_' + k, val);
-    });
-  }
-  return true;
 }
 
 // ── Today string ─────────────────────────────────────────────
@@ -2970,19 +2740,18 @@ function todayStr() {
 }
 
 // ── Expose ───────────────────────────────────────────────────
-window.lsGet        = lsGet;
-window.lsSet        = lsSet;
-window.lsDel        = lsDel;
-window.loadState    = loadState;
-window.saveState    = saveState;
-window.saveTask     = saveTask;
-window.saveNotes    = saveNotes;
+window.lsGet         = lsGet;
+window.lsSet         = lsSet;
+window.lsDel         = lsDel;
+window.userPrefix    = userPrefix;
+window.loadState     = loadState;
+window.saveState     = saveState;
+window.saveTask      = saveTask;
+window.saveNotes     = saveNotes;
 window.saveReminders = saveReminders;
-window.saveTracker  = saveTracker;
-window.saveSchedule = saveSchedule;
-window.saveUserState = saveUserState;
-window.loadUserState = loadUserState;
-window.todayStr     = todayStr;
+window.saveTracker   = saveTracker;
+window.saveSchedule  = saveSchedule;
+window.todayStr      = todayStr;
 
   </script>
   <script>
@@ -3509,13 +3278,20 @@ window.renderThemePicker = function () {
 
       if (cfgData) {
         foundUser = { name: cfgData.name || email.split('@')[0], email };
+
+        // Firebase'den kullanıcı verisini çek ve kullanıcı prefix'ine yaz
         const allData = await window.fbLoadAll();
-        if (allData.g_tasks)        { lsSet('g_tasks',        allData.g_tasks);        window.g_tasks        = allData.g_tasks; }
-        if (allData.g_notes)        { lsSet('g_notes',        allData.g_notes);        window.g_notes        = allData.g_notes; }
-        if (allData.g_notebooks)    { lsSet('g_notebooks',    allData.g_notebooks);    window.g_notebooks    = allData.g_notebooks; }
-        if (allData.g_reminders)    { lsSet('g_reminders',    allData.g_reminders);    window.g_reminders    = allData.g_reminders; }
-        if (allData.g_tracker)      { lsSet('g_tracker',      allData.g_tracker);      window.g_tracker      = allData.g_tracker; }
-        if (allData.g_tracker_cols) { lsSet('g_tracker_cols', allData.g_tracker_cols); window.g_tracker_cols = allData.g_tracker_cols; }
+        const pfx = 'u_' + uid + '_';
+        if (allData.g_tasks)        { lsSet(pfx + 'g_tasks',        allData.g_tasks); }
+        if (allData.g_notes)        { lsSet(pfx + 'g_notes',        allData.g_notes); }
+        if (allData.g_notebooks)    { lsSet(pfx + 'g_notebooks',    allData.g_notebooks); }
+        if (allData.g_reminders)    { lsSet(pfx + 'g_reminders',    allData.g_reminders); }
+        if (allData.g_tracker)      { lsSet(pfx + 'g_tracker',      allData.g_tracker); }
+        if (allData.g_tracker_cols) { lsSet(pfx + 'g_tracker_cols', allData.g_tracker_cols); }
+        if (allData.g_schedule)     { lsSet(pfx + 'g_schedule',     allData.g_schedule); }
+
+        // Veriyi az önce yükledik — initApp'te tekrar Firebase'e gitmeye gerek yok
+        window._sessionRestore = true;
       } else {
         // Firebase erişilebilir ama hesap bulunamadı → yanlış kimlik
         showErr(errLogin, 'E-posta veya şifre hatalı.');
@@ -3556,8 +3332,7 @@ window.renderThemePicker = function () {
 
     if (user && remember) {
       window.g_user = user;
-      // Re-create UID (we don't store password, so use a deterministic fallback)
-      // UID stored separately if available
+      window._sessionRestore = true; // localStorage taze — Firebase'den çekme
       const storedUid = lsGet('g_uid', null);
       if (storedUid) window._fbUid = storedUid;
       hideLogin();
@@ -3569,25 +3344,21 @@ window.renderThemePicker = function () {
 
   // ── After login ───────────────────────────────────────────
   function hideLogin() {
-    // Store UID
+    // UID'yi kaydet (loadState() bunu kullanarak doğru prefix'i bulur)
     if (window._fbUid) lsSet('g_uid', window._fbUid);
-    // Kullanıcıya özel veriyi yükle (Firebase yoksa localStorage yedekten)
-    if (typeof window.loadUserState === 'function') window.loadUserState();
     loginScreen.style.display = 'none';
     document.getElementById('app').style.display = 'flex';
-    // Init app
     if (typeof window.initApp === 'function') window.initApp();
   }
 
   // ── Logout ────────────────────────────────────────────────
   window.doLogout = function () {
-    // Çıkmadan önce kullanıcı verisini UID altında yedekle
-    if (typeof window.saveUserState === 'function') window.saveUserState();
     lsDel('g_user');
     lsDel('g_remember');
     lsDel('g_uid');
     window.g_user = null;
     window._fbUid = null;
+    window._sessionRestore = false;
     location.reload();
   };
 
@@ -3802,6 +3573,7 @@ window.renderThemePicker = function () {
     const t2 = document.getElementById('ecfg-time2').value;
     const t3 = document.getElementById('ecfg-time3').value;
 
+    // Builtin credentials + kullanıcının e-postası
     const builtin = window._BUILTIN_EJS_CFG || {};
     window.g_emailCfg = { toEmail, serviceId: builtin.serviceId, templateId: builtin.templateId, publicKey: builtin.publicKey };
     lsSet('g_email', window.g_emailCfg);
@@ -3813,7 +3585,6 @@ window.renderThemePicker = function () {
 
     document.getElementById('modal-email-cfg').classList.add('hidden');
 
-    // Re-init
     await window.initEmail();
     showNotif('✉️', 'E-posta ayarlandı', 'E-posta bildirimleri etkinleştirildi.');
     scheduleSync();
@@ -3858,7 +3629,8 @@ window.initApp = function () {
     const cfg = userCfg || window._BUILTIN_FB_CFG;
     if (cfg && typeof window.initFirebase === 'function') {
       const ok = await window.initFirebase(cfg);
-      if (ok) {
+      // Session restore'da localStorage tazedir — Firebase ile ezme
+      if (ok && !window._sessionRestore) {
         await window.loadFromFirebase();
       }
     }
@@ -3934,6 +3706,9 @@ document.getElementById('btn-templates')?.addEventListener('click', () => window
 
 // ── Email config save ─────────────────────────────────────────
 document.getElementById('btn-save-email-cfg')?.addEventListener('click', () => window.saveEmailConfig());
+
+// ── Firebase config save ──────────────────────────────────────
+document.getElementById('btn-save-fb-cfg')?.addEventListener('click', () => window.saveFirebaseConfig());
 
 // ── Task modal save ───────────────────────────────────────────
 document.getElementById('btn-save-task')?.addEventListener('click', () => window.saveTask_modal());
@@ -5733,13 +5508,14 @@ window.loadFromFirebase = async function () {
   if (!window._fbReady || !window._fbUid) return;
   try {
     const all = await window.fbLoadAll();
-    if (all.g_tasks)        { lsSet('g_tasks',        all.g_tasks);        window.g_tasks        = all.g_tasks; }
-    if (all.g_notes)        { lsSet('g_notes',        all.g_notes);        window.g_notes        = all.g_notes; }
-    if (all.g_notebooks)    { lsSet('g_notebooks',    all.g_notebooks);    window.g_notebooks    = all.g_notebooks; }
-    if (all.g_reminders)    { lsSet('g_reminders',    all.g_reminders);    window.g_reminders    = all.g_reminders; }
-    if (all.g_tracker)      { lsSet('g_tracker',      all.g_tracker);      window.g_tracker      = all.g_tracker; }
-    if (all.g_tracker_cols) { lsSet('g_tracker_cols', all.g_tracker_cols); window.g_tracker_cols = all.g_tracker_cols; }
-    if (all.g_schedule)     { lsSet('g_schedule',     all.g_schedule);     window.g_schedule     = all.g_schedule; }
+    const pfx = 'u_' + window._fbUid + '_';
+    if (all.g_tasks)        { lsSet(pfx + 'g_tasks',        all.g_tasks);        window.g_tasks        = all.g_tasks; }
+    if (all.g_notes)        { lsSet(pfx + 'g_notes',        all.g_notes);        window.g_notes        = all.g_notes; }
+    if (all.g_notebooks)    { lsSet(pfx + 'g_notebooks',    all.g_notebooks);    window.g_notebooks    = all.g_notebooks; }
+    if (all.g_reminders)    { lsSet(pfx + 'g_reminders',    all.g_reminders);    window.g_reminders    = all.g_reminders; }
+    if (all.g_tracker)      { lsSet(pfx + 'g_tracker',      all.g_tracker);      window.g_tracker      = all.g_tracker; }
+    if (all.g_tracker_cols) { lsSet(pfx + 'g_tracker_cols', all.g_tracker_cols); window.g_tracker_cols = all.g_tracker_cols; }
+    if (all.g_schedule)     { lsSet(pfx + 'g_schedule',     all.g_schedule);     window.g_schedule     = all.g_schedule; }
     console.log('[Pinle] Loaded from Firebase.');
 
     // Buluttan gelen veriyle ekranı yenile
@@ -5754,8 +5530,54 @@ window.loadFromFirebase = async function () {
   }
 };
 
+// ── Firebase config modal ─────────────────────────────────────
+window.openFirebaseConfig = function () {
+  const modal = document.getElementById('modal-fb-cfg');
+  if (!modal) return;
+  const cfg = lsGet('g_fb_cfg', {});
+  document.getElementById('fb-apikey').value     = cfg.apiKey     || '';
+  document.getElementById('fb-authdomain').value = cfg.authDomain || '';
+  document.getElementById('fb-projectid').value  = cfg.projectId  || '';
+  document.getElementById('fb-storagebucket').value = cfg.storageBucket || '';
+  document.getElementById('fb-senderid').value   = cfg.messagingSenderId || '';
+  document.getElementById('fb-appid').value      = cfg.appId     || '';
+  modal.classList.remove('hidden');
+};
+
+window.saveFirebaseConfig = async function () {
+  const cfg = {
+    apiKey:            document.getElementById('fb-apikey').value.trim(),
+    authDomain:        document.getElementById('fb-authdomain').value.trim(),
+    projectId:         document.getElementById('fb-projectid').value.trim(),
+    storageBucket:     document.getElementById('fb-storagebucket').value.trim(),
+    messagingSenderId: document.getElementById('fb-senderid').value.trim(),
+    appId:             document.getElementById('fb-appid').value.trim()
+  };
+
+  if (!cfg.projectId) {
+    showNotif('⚠️', 'Eksik bilgi', 'En azından Project ID gerekli.');
+    return;
+  }
+
+  lsSet('g_fb_cfg', cfg);
+  document.getElementById('modal-fb-cfg').classList.add('hidden');
+
+  try {
+    const ok = await window.initFirebase(cfg);
+    if (ok) {
+      showNotif('🔥', 'Firebase bağlandı', `Proje: ${cfg.projectId}`);
+      await window.loadFromFirebase();
+      window.setNav(window.curNav);
+    } else {
+      showNotif('⚠️', 'Bağlantı hatası', 'Firebase başlatılamadı.');
+    }
+  } catch (e) {
+    showNotif('❌', 'Hata', e.message);
+  }
+};
 
   </script>
+
 
 </body>
 </html>
