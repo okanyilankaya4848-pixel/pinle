@@ -3658,7 +3658,11 @@ window.renderThemePicker = function () {
   }
 
   async function tryInitFirebase() {
-    // Try user config first, then builtin
+    // ES module (firebase-init.js) async yüklendiğinden hazır olana kadar bekle
+    for (let i = 0; i < 15; i++) {
+      if (typeof window.initFirebase === 'function') break;
+      await new Promise(r => setTimeout(r, 200));
+    }
     const userCfg = lsGet('g_fb_cfg', null);
     const cfg = userCfg || window._BUILTIN_FB_CFG;
     if (cfg && typeof window.initFirebase === 'function') {
@@ -3908,6 +3912,11 @@ window.initApp = function () {
 
   // 3. Try Firebase init from stored config
   (async () => {
+    // ES module async yüklendiğinden hazır olana kadar bekle (maks 3sn)
+    for (let i = 0; i < 15; i++) {
+      if (typeof window.initFirebase === 'function') break;
+      await new Promise(r => setTimeout(r, 200));
+    }
     const userCfg = lsGet('g_fb_cfg', null);
     const cfg = userCfg || window._BUILTIN_FB_CFG;
     if (cfg && typeof window.initFirebase === 'function') {
