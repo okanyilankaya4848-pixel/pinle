@@ -1873,7 +1873,7 @@ img { display: block; max-width: 100%; }
 .template-card .t-name { font-size: 13px; font-weight: 600; color: var(--text); }
 .template-card .t-desc { font-size: 11px; color: var(--text3); margin-top: 3px; }
 
-/* ── Firebase Config Modal ─────────────────────────────────── */
+/* ── Config Sections ────────────────────────────────────────── */
 .cfg-section {
   background: var(--s2);
   border: 1px solid var(--border);
@@ -2200,7 +2200,6 @@ window.makeUID = async function (email, password) {
               <div class="user-dropdown-email" id="dd-email"></div>
             </div>
             <div class="user-dropdown-item" id="btn-open-settings">⚙️ E-posta Ayarları</div>
-            <div class="user-dropdown-item" id="btn-open-fb">🔥 Firebase Ayarları</div>
             <div class="user-dropdown-item danger" id="btn-logout">🚪 Çıkış Yap</div>
           </div>
         </div>
@@ -2613,22 +2612,10 @@ window.makeUID = async function (email, password) {
           </div>
         </div>
         <div class="cfg-section" style="margin-top:12px;">
-          <div class="cfg-section-title">EmailJS Ayarları</div>
-          <div class="form-group">
-            <label class="form-label">Alıcı E-posta</label>
-            <input id="ecfg-to" class="form-input" type="email" placeholder="ornek@email.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Service ID</label>
-            <input id="ecfg-service" class="form-input" type="text">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Template ID</label>
-            <input id="ecfg-template" class="form-input" type="text">
-          </div>
+          <div class="cfg-section-title">E-posta Bildirimleri</div>
           <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Public Key</label>
-            <input id="ecfg-pubkey" class="form-input" type="text">
+            <label class="form-label">Bildirim Gönderilecek E-posta</label>
+            <input id="ecfg-to" class="form-input" type="email" placeholder="ornek@email.com">
           </div>
         </div>
       </div>
@@ -2639,50 +2626,7 @@ window.makeUID = async function (email, password) {
     </div>
   </div>
 
-  <!-- Firebase Config Modal -->
-  <div class="modal-overlay hidden" id="modal-fb-cfg">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title">🔥 Firebase Ayarları</h3>
-        <button class="modal-close" data-close-modal="modal-fb-cfg">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size:12px;color:var(--text3);margin-bottom:14px;">
-          Firebase Console'dan aldığınız config bilgilerini girin.
-        </p>
-        <div class="form-group">
-          <label class="form-label">API Key</label>
-          <input id="fb-apikey" class="form-input" type="text" placeholder="AIzaSy...">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Auth Domain</label>
-          <input id="fb-authdomain" class="form-input" type="text" placeholder="project.firebaseapp.com">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Project ID</label>
-          <input id="fb-projectid" class="form-input" type="text" placeholder="my-project">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Storage Bucket</label>
-          <input id="fb-storagebucket" class="form-input" type="text" placeholder="my-project.appspot.com">
-        </div>
-        <div class="form-row">
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Messaging Sender ID</label>
-            <input id="fb-senderid" class="form-input" type="text">
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">App ID</label>
-            <input id="fb-appid" class="form-input" type="text">
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" data-close-modal="modal-fb-cfg">İptal</button>
-        <button class="btn btn-primary" id="btn-save-fb-cfg">Bağlan</button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Add Tracker Column Modal -->
   <div class="modal-overlay hidden" id="modal-add-col">
@@ -3842,12 +3786,8 @@ window.renderThemePicker = function () {
     const modal = document.getElementById('modal-email-cfg');
     if (!modal) return;
     const cfg = window.g_emailCfg || {};
-    document.getElementById('ecfg-to').value        = cfg.toEmail    || (window.g_user ? window.g_user.email : '');
-    document.getElementById('ecfg-service').value   = cfg.serviceId  || window._BUILTIN_EJS_CFG.serviceId;
-    document.getElementById('ecfg-template').value  = cfg.templateId || window._BUILTIN_EJS_CFG.templateId;
-    document.getElementById('ecfg-pubkey').value    = cfg.publicKey  || window._BUILTIN_EJS_CFG.publicKey;
+    document.getElementById('ecfg-to').value = cfg.toEmail || (window.g_user ? window.g_user.email : '');
 
-    // reminder times
     const times = (window.g_reminders || {}).times || [];
     document.getElementById('ecfg-time1').value = times[0] || '';
     document.getElementById('ecfg-time2').value = times[1] || '';
@@ -3857,17 +3797,14 @@ window.renderThemePicker = function () {
   };
 
   window.saveEmailConfig = async function () {
-    const toEmail    = document.getElementById('ecfg-to').value.trim();
-    const serviceId  = document.getElementById('ecfg-service').value.trim();
-    const templateId = document.getElementById('ecfg-template').value.trim();
-    const publicKey  = document.getElementById('ecfg-pubkey').value.trim();
+    const toEmail = document.getElementById('ecfg-to').value.trim();
     const t1 = document.getElementById('ecfg-time1').value;
     const t2 = document.getElementById('ecfg-time2').value;
     const t3 = document.getElementById('ecfg-time3').value;
 
-    window.g_emailCfg = { toEmail, serviceId, templateId, publicKey };
+    const builtin = window._BUILTIN_EJS_CFG || {};
+    window.g_emailCfg = { toEmail, serviceId: builtin.serviceId, templateId: builtin.templateId, publicKey: builtin.publicKey };
     lsSet('g_email', window.g_emailCfg);
-    lsSet('g_ejs', { serviceId, templateId, publicKey });
 
     const times = [t1, t2, t3].filter(Boolean);
     window.g_reminders = window.g_reminders || { times: [], tasks: [] };
@@ -3995,14 +3932,8 @@ document.querySelectorAll('.view-toggle-btn').forEach(btn => {
 // ── Templates button ──────────────────────────────────────────
 document.getElementById('btn-templates')?.addEventListener('click', () => window.openTemplates());
 
-// ── Firebase config open ──────────────────────────────────────
-document.getElementById('btn-fb-cfg')?.addEventListener('click', () => window.openFirebaseConfig());
-
 // ── Email config save ─────────────────────────────────────────
 document.getElementById('btn-save-email-cfg')?.addEventListener('click', () => window.saveEmailConfig());
-
-// ── Firebase config save ──────────────────────────────────────
-document.getElementById('btn-save-fb-cfg')?.addEventListener('click', () => window.saveFirebaseConfig());
 
 // ── Task modal save ───────────────────────────────────────────
 document.getElementById('btn-save-task')?.addEventListener('click', () => window.saveTask_modal());
@@ -4022,10 +3953,6 @@ document.getElementById('btn-save-col')?.addEventListener('click', () => {});
 // ── User dropdown logout ──────────────────────────────────────
 document.getElementById('btn-logout')?.addEventListener('click', window.doLogout);
 document.getElementById('btn-open-settings')?.addEventListener('click', window.openSettings);
-document.getElementById('btn-open-fb')?.addEventListener('click', () => {
-  document.getElementById('userDropdown')?.classList.remove('open');
-  window.openFirebaseConfig();
-});
 
   </script>
   <script>
@@ -5827,51 +5754,6 @@ window.loadFromFirebase = async function () {
   }
 };
 
-// ── Firebase config modal ─────────────────────────────────────
-window.openFirebaseConfig = function () {
-  const modal = document.getElementById('modal-fb-cfg');
-  if (!modal) return;
-  const cfg = lsGet('g_fb_cfg', {});
-  document.getElementById('fb-apikey').value     = cfg.apiKey     || '';
-  document.getElementById('fb-authdomain').value = cfg.authDomain || '';
-  document.getElementById('fb-projectid').value  = cfg.projectId  || '';
-  document.getElementById('fb-storagebucket').value = cfg.storageBucket || '';
-  document.getElementById('fb-senderid').value   = cfg.messagingSenderId || '';
-  document.getElementById('fb-appid').value      = cfg.appId     || '';
-  modal.classList.remove('hidden');
-};
-
-window.saveFirebaseConfig = async function () {
-  const cfg = {
-    apiKey:            document.getElementById('fb-apikey').value.trim(),
-    authDomain:        document.getElementById('fb-authdomain').value.trim(),
-    projectId:         document.getElementById('fb-projectid').value.trim(),
-    storageBucket:     document.getElementById('fb-storagebucket').value.trim(),
-    messagingSenderId: document.getElementById('fb-senderid').value.trim(),
-    appId:             document.getElementById('fb-appid').value.trim()
-  };
-
-  if (!cfg.projectId) {
-    showNotif('⚠️', 'Eksik bilgi', 'En azından Project ID gerekli.');
-    return;
-  }
-
-  lsSet('g_fb_cfg', cfg);
-  document.getElementById('modal-fb-cfg').classList.add('hidden');
-
-  try {
-    const ok = await window.initFirebase(cfg);
-    if (ok) {
-      showNotif('🔥', 'Firebase bağlandı', `Proje: ${cfg.projectId}`);
-      await window.loadFromFirebase();
-      window.setNav(window.curNav);
-    } else {
-      showNotif('⚠️', 'Bağlantı hatası', 'Firebase başlatılamadı.');
-    }
-  } catch (e) {
-    showNotif('❌', 'Hata', e.message);
-  }
-};
 
   </script>
 
