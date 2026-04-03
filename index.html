@@ -55,6 +55,40 @@ input, select, textarea { font-family: inherit; }
 ul, ol { list-style: none; }
 img { display: block; max-width: 100%; }
 
+/* ── Theme Picker ──────────────────────────────────────────── */
+.theme-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  transition: border-color var(--transition);
+}
+.theme-swatch:hover { border-color: var(--border2); }
+.theme-swatch.active { border-color: var(--gold); }
+.theme-swatch-colors {
+  display: flex;
+  border-radius: 5px;
+  overflow: hidden;
+  width: 52px;
+  height: 30px;
+}
+.theme-swatch-colors span { flex: 1; display: block; }
+.theme-swatch-name {
+  font-size: 10px;
+  color: var(--text2);
+  text-align: center;
+}
+.theme-swatch.active .theme-swatch-name { color: var(--gold); }
+
 /* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -2554,6 +2588,11 @@ window.makeUID = async function (email, password) {
         <button class="modal-close" data-close-modal="modal-email-cfg">✕</button>
       </div>
       <div class="modal-body">
+        <div class="cfg-section" style="margin-bottom:16px;">
+          <div class="cfg-section-title">Tema</div>
+          <div class="theme-picker" id="theme-picker"></div>
+        </div>
+        <div style="border-top:1px solid var(--border);margin-bottom:16px;"></div>
         <div class="cfg-section">
           <div class="cfg-section-title">Hatırlatma Saatleri (en fazla 3)</div>
           <div class="form-row-3">
@@ -3322,8 +3361,98 @@ if (userAvatar && userDropdown) {
 // ── Open settings from dropdown ────────────────────────────────
 window.openSettings = function () {
   document.getElementById('userDropdown')?.classList.remove('open');
+  window.renderThemePicker();
   document.getElementById('modal-email-cfg')?.classList.remove('hidden');
   if (typeof window.openEmailConfig === 'function') window.openEmailConfig();
+};
+
+// ── Tema sistemi ───────────────────────────────────────────────
+const THEMES = [
+  {
+    id: 'rose', name: 'Gül',
+    preview: ['#0f0b0d', '#e07090', '#c46090'],
+    vars: {
+      '--bg': '#0f0b0d', '--s1': '#1a1215', '--s2': '#241820', '--s3': '#301e28',
+      '--border': '#2d1e24', '--border2': '#402830',
+      '--gold': '#e07090', '--gold2': '#f090a8', '--purple': '#c46090',
+      '--blue': '#8090d0', '--text': '#f0e8ec', '--text2': '#b89aa4', '--text3': '#7a5a64'
+    }
+  },
+  {
+    id: 'ocean', name: 'Okyanus',
+    preview: ['#090d14', '#5090e0', '#40c0d0'],
+    vars: {
+      '--bg': '#090d14', '--s1': '#101828', '--s2': '#162034', '--s3': '#1e2c42',
+      '--border': '#1c2d44', '--border2': '#263d58',
+      '--gold': '#5090e0', '--gold2': '#70aaf0', '--purple': '#7070d0',
+      '--blue': '#40c0d0', '--text': '#e8eef8', '--text2': '#8aa4c0', '--text3': '#4a6480'
+    }
+  },
+  {
+    id: 'forest', name: 'Orman',
+    preview: ['#080f09', '#50a860', '#4090a0'],
+    vars: {
+      '--bg': '#080f09', '--s1': '#0f1a10', '--s2': '#162218', '--s3': '#1e2e20',
+      '--border': '#1a2e1c', '--border2': '#243e28',
+      '--gold': '#50a860', '--gold2': '#68c078', '--purple': '#60b080',
+      '--blue': '#4090a0', '--text': '#e4f0e6', '--text2': '#80a888', '--text3': '#486050'
+    }
+  },
+  {
+    id: 'amber', name: 'Amber',
+    preview: ['#0f0d08', '#d4963c', '#c07040'],
+    vars: {
+      '--bg': '#0f0d08', '--s1': '#1a1608', '--s2': '#241e0c', '--s3': '#302814',
+      '--border': '#2c2210', '--border2': '#3e3018',
+      '--gold': '#d4963c', '--gold2': '#e8ac50', '--purple': '#c07040',
+      '--blue': '#6090a8', '--text': '#f0ece0', '--text2': '#b89a70', '--text3': '#786040'
+    }
+  },
+  {
+    id: 'violet', name: 'Ametist',
+    preview: ['#0c0812', '#9060d0', '#6080d8'],
+    vars: {
+      '--bg': '#0c0812', '--s1': '#160e20', '--s2': '#20162c', '--s3': '#2c1e3a',
+      '--border': '#241840', '--border2': '#322050',
+      '--gold': '#9060d0', '--gold2': '#a878e8', '--purple': '#7050b0',
+      '--blue': '#6080d8', '--text': '#ece8f4', '--text2': '#a090c0', '--text3': '#605878'
+    }
+  },
+  {
+    id: 'slate', name: 'Gece',
+    preview: ['#0a0c0e', '#7090b0', '#5098b8'],
+    vars: {
+      '--bg': '#0a0c0e', '--s1': '#121618', '--s2': '#1a2024', '--s3': '#222c32',
+      '--border': '#202830', '--border2': '#2c3840',
+      '--gold': '#7090b0', '--gold2': '#88a8c8', '--purple': '#6878a8',
+      '--blue': '#5098b8', '--text': '#e8eef2', '--text2': '#8090a0', '--text3': '#506070'
+    }
+  }
+];
+
+window.applyTheme = function (id) {
+  const theme = THEMES.find(t => t.id === id) || THEMES[0];
+  const root = document.documentElement;
+  Object.entries(theme.vars).forEach(([k, v]) => root.style.setProperty(k, v));
+  lsSet('g_theme', theme.id);
+  document.querySelectorAll('.theme-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.theme === theme.id);
+  });
+};
+
+window.renderThemePicker = function () {
+  const wrap = document.getElementById('theme-picker');
+  if (!wrap) return;
+  const current = lsGet('g_theme', 'rose');
+  wrap.innerHTML = THEMES.map(t => `
+    <div class="theme-swatch ${t.id === current ? 'active' : ''}" data-theme="${t.id}"
+         onclick="window.applyTheme('${t.id}')" title="${t.name}">
+      <div class="theme-swatch-colors">
+        ${t.preview.map(c => `<span style="background:${c}"></span>`).join('')}
+      </div>
+      <div class="theme-swatch-name">${t.name}</div>
+    </div>
+  `).join('');
 };
 
   </script>
@@ -3385,6 +3514,16 @@ window.openSettings = function () {
     const uid = await window.makeUID(email, pass);
     window._fbUid = uid;
 
+    // Mevcut hesap kontrolü
+    try {
+      await tryInitFirebase();
+      const existing = await window.fbLoadConfig();
+      if (existing) {
+        showErr(errRegister, 'Bu e-posta ile zaten bir hesap var. Giriş yapın.');
+        return;
+      }
+    } catch (e) { /* çevrimdışı — devam et */ }
+
     const user = { name, email };
     window.g_user = user;
     lsSet('g_user', user);
@@ -3392,11 +3531,10 @@ window.openSettings = function () {
     const remember = document.getElementById('reg-remember').checked;
     lsSet('g_remember', remember);
 
-    // Try sync to Firebase
+    // Firebase'e kaydet
     try {
-      await tryInitFirebase();
       await window.fbSaveConfig({ email, name, updatedAt: Date.now() });
-    } catch (e) { /* offline ok */ }
+    } catch (e) { /* çevrimdışı ok */ }
 
     hideLogin();
     showNotif('🎉', 'Hoş geldin!', `Merhaba, ${name}! Hesabın oluşturuldu.`);
@@ -3417,33 +3555,41 @@ window.openSettings = function () {
     const uid = await window.makeUID(email, pass);
     window._fbUid = uid;
 
-    // Try to load from Firebase
     let foundUser = null;
+
     try {
       await tryInitFirebase();
       const cfgData = await window.fbLoadConfig();
+
       if (cfgData) {
         foundUser = { name: cfgData.name || email.split('@')[0], email };
-        // Load data from Firebase
         const allData = await window.fbLoadAll();
-        if (allData.g_tasks)        { lsSet('g_tasks',        allData.g_tasks); window.g_tasks = allData.g_tasks; }
-        if (allData.g_notes)        { lsSet('g_notes',        allData.g_notes); window.g_notes = allData.g_notes; }
-        if (allData.g_notebooks)    { lsSet('g_notebooks',    allData.g_notebooks); window.g_notebooks = allData.g_notebooks; }
-        if (allData.g_reminders)    { lsSet('g_reminders',    allData.g_reminders); window.g_reminders = allData.g_reminders; }
-        if (allData.g_tracker)      { lsSet('g_tracker',      allData.g_tracker); window.g_tracker = allData.g_tracker; }
+        if (allData.g_tasks)        { lsSet('g_tasks',        allData.g_tasks);        window.g_tasks        = allData.g_tasks; }
+        if (allData.g_notes)        { lsSet('g_notes',        allData.g_notes);        window.g_notes        = allData.g_notes; }
+        if (allData.g_notebooks)    { lsSet('g_notebooks',    allData.g_notebooks);    window.g_notebooks    = allData.g_notebooks; }
+        if (allData.g_reminders)    { lsSet('g_reminders',    allData.g_reminders);    window.g_reminders    = allData.g_reminders; }
+        if (allData.g_tracker)      { lsSet('g_tracker',      allData.g_tracker);      window.g_tracker      = allData.g_tracker; }
         if (allData.g_tracker_cols) { lsSet('g_tracker_cols', allData.g_tracker_cols); window.g_tracker_cols = allData.g_tracker_cols; }
+      } else {
+        // Firebase erişilebilir ama hesap bulunamadı → yanlış kimlik
+        showErr(errLogin, 'E-posta veya şifre hatalı.');
+        return;
       }
-    } catch (e) { /* offline */ }
-
-    // If not found in Firebase, check if we have local data for this uid
-    if (!foundUser) {
-      // Allow offline login if user exists locally (remember = true)
+    } catch (e) {
+      // Çevrimdışı — yerel yedekten giriş
       const savedUser = lsGet('g_user', null);
+      const savedUid  = lsGet('g_uid', null);
+
       if (savedUser && savedUser.email === email) {
+        // Kaydedilmiş UID ile şifre hash'ini karşılaştır
+        if (savedUid && savedUid !== uid) {
+          showErr(errLogin, 'Şifre hatalı. İnternet bağlantısı ile giriş yapın.');
+          return;
+        }
         foundUser = savedUser;
       } else {
-        // Create minimal user for first offline use
-        foundUser = { name: email.split('@')[0], email };
+        showErr(errLogin, 'Bağlantı yok. Kayıtlı oturum bulunamadı.');
+        return;
       }
     }
 
@@ -3739,6 +3885,10 @@ window.openSettings = function () {
    ============================================================ */
 
 window.initApp = function () {
+  // 0. Kayıtlı temayı uygula
+  const savedTheme = lsGet('g_theme', 'rose');
+  if (typeof window.applyTheme === 'function') window.applyTheme(savedTheme);
+
   // 1. Load state from localStorage
   window.loadState();
 
@@ -5639,7 +5789,7 @@ async function syncToFirebase() {
 }
 
 /**
- * Load all data from Firebase and merge into localStorage.
+ * Load all data from Firebase and merge into localStorage, then re-render UI.
  */
 window.loadFromFirebase = async function () {
   if (!window._fbReady || !window._fbUid) return;
@@ -5653,6 +5803,14 @@ window.loadFromFirebase = async function () {
     if (all.g_tracker_cols) { lsSet('g_tracker_cols', all.g_tracker_cols); window.g_tracker_cols = all.g_tracker_cols; }
     if (all.g_schedule)     { lsSet('g_schedule',     all.g_schedule);     window.g_schedule     = all.g_schedule; }
     console.log('[Pinle] Loaded from Firebase.');
+
+    // Buluttan gelen veriyle ekranı yenile
+    if (typeof window.setNav === 'function') {
+      window.setNav(window.curNav || 'today');
+    }
+    if (typeof window.updateStats         === 'function') window.updateStats();
+    if (typeof window.renderMiniCal       === 'function') window.renderMiniCal();
+    if (typeof window.updateNavNotebooks  === 'function') window.updateNavNotebooks();
   } catch (e) {
     console.warn('[Pinle] Load from Firebase failed:', e.message);
   }
