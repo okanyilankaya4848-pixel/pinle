@@ -3663,9 +3663,9 @@ window.initApp = function () {
   // 10. Update nav notebooks
   window.updateNavNotebooks();
 
-  // Sayfa kapanırken kullanıcı verisini yedekle
+  // Sayfa kapanırken state kaydet (Firebase sync zaten scheduleSync ile olur)
   window.addEventListener('beforeunload', () => {
-    if (typeof window.saveUserState === 'function') window.saveUserState();
+    window.saveState();
   });
 
   console.log('[Pinle] App initialized.');
@@ -3722,8 +3722,7 @@ document.getElementById('btn-new-note')?.addEventListener('click', () => window.
 // ── Add tracker column ────────────────────────────────────────
 document.getElementById('btn-add-col')?.addEventListener('click', () => window.openAddColumnModal(null));
 
-// ── Save column ────────────────────────────────────────────────
-document.getElementById('btn-save-col')?.addEventListener('click', () => {});
+// Not: btn-save-col onclick'i tracker.js içindeki openAddColumnModal tarafından dinamik set edilir
 
 // ── User dropdown logout ──────────────────────────────────────
 document.getElementById('btn-logout')?.addEventListener('click', window.doLogout);
