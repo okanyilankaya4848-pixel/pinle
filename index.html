@@ -2760,6 +2760,23 @@ window.todayStr      = todayStr;
    helpers.js — Utility functions
    ============================================================ */
 
+// ── Global hata yakalayıcı (geliştirme yardımcısı) ───────────
+window.onerror = function (msg, src, line, col, err) {
+  const label = src ? src.split('/').pop() : '?';
+  console.error('[Pinle Hata]', msg, `(${label}:${line})`);
+  // Kritik hataları kullanıcıya göster
+  const container = document.getElementById('notif-container');
+  if (container && msg) {
+    const d = document.createElement('div');
+    d.className = 'toast toast-error';
+    d.style.cssText = 'background:#c0392b;color:#fff;padding:10px 14px;border-radius:8px;margin-top:8px;font-size:12px;max-width:320px;word-break:break-word;';
+    d.textContent = `⚠️ JS Hata: ${msg} (${label}:${line})`;
+    container.appendChild(d);
+    setTimeout(() => d.remove(), 8000);
+  }
+  return false;
+};
+
 // ── Notifications ─────────────────────────────────────────────
 window.showNotif = function (icon, title, text, duration = 3500) {
   const container = document.getElementById('notif-container');
