@@ -3490,8 +3490,9 @@ window.renderThemePicker = function () {
     window.g_user = user;
     lsSet('g_user', user);
 
+    // Beni hatırla: e-posta ve şifreyi sakla
     const remember = document.getElementById('reg-remember').checked;
-    lsSet('g_remember', remember);
+    saveCredentials(remember, email, pass);
 
     // Firebase'e kaydet
     try {
@@ -3550,7 +3551,6 @@ window.renderThemePicker = function () {
       const savedUid  = lsGet('g_uid', null);
 
       if (savedUser && savedUser.email === email) {
-        // Kaydedilmiş UID ile şifre hash'ini karşılaştır
         if (savedUid && savedUid !== uid) {
           showErr(errLogin, 'Şifre hatalı. İnternet bağlantısı ile giriş yapın.');
           return;
@@ -3565,33 +3565,46 @@ window.renderThemePicker = function () {
     window.g_user = foundUser;
     lsSet('g_user', foundUser);
 
+    // Beni hatırla: e-posta ve şifreyi sakla
     const remember = document.getElementById('login-remember').checked;
-    lsSet('g_remember', remember);
+    saveCredentials(remember, email, pass);
 
     hideLogin();
     showNotif('👋', 'Tekrar hoş geldin!', `Merhaba, ${foundUser.name}!`);
   });
 
-  // ── Check session ─────────────────────────────────────────
-  async function checkSession() {
-    const user     = lsGet('g_user', null);
-    const remember = lsGet('g_remember', false);
-
-    if (user && remember) {
-      window.g_user = user;
-      window._sessionRestore = true; // localStorage taze — Firebase'den çekme
-      const storedUid = lsGet('g_uid', null);
-      if (storedUid) window._fbUid = storedUid;
-      hideLogin();
-      return;
+  // ── Kimlik bilgilerini kaydet / sil ───────────────────────
+  function saveCredentials(remember, email, pass) {
+    if (remember) {
+      lsSet('g_remember',    true);
+      lsSet('g_saved_email', email);
+      lsSet('g_saved_pass',  pass);
+    } else {
+      lsDel('g_remember');
+      lsDel('g_saved_email');
+      lsDel('g_saved_pass');
     }
-    // Show login screen
+  }
+
+  // ── Sayfa açılışı: formu doldur, her zaman giriş ekranını göster ──
+  function checkSession() {
+    const remember    = lsGet('g_remember', false);
+    const savedEmail  = lsGet('g_saved_email', '');
+    const savedPass   = lsGet('g_saved_pass',  '');
+
+    if (remember && savedEmail && savedPass) {
+      // Giriş formunu otomatik doldur, kullanıcı sadece butona basar
+      switchTab('login');
+      document.getElementById('login-email').value       = savedEmail;
+      document.getElementById('login-pass').value        = savedPass;
+      document.getElementById('login-remember').checked  = true;
+    }
+
     loginScreen.style.display = 'flex';
   }
 
   // ── After login ───────────────────────────────────────────
   function hideLogin() {
-    // UID'yi kaydet (loadState() bunu kullanarak doğru prefix'i bulur)
     if (window._fbUid) lsSet('g_uid', window._fbUid);
     loginScreen.style.display = 'none';
     document.getElementById('app').style.display = 'flex';
@@ -3601,11 +3614,11 @@ window.renderThemePicker = function () {
   // ── Logout ────────────────────────────────────────────────
   window.doLogout = function () {
     lsDel('g_user');
-    lsDel('g_remember');
     lsDel('g_uid');
     window.g_user = null;
     window._fbUid = null;
     window._sessionRestore = false;
+    // g_remember / g_saved_email / g_saved_pass: bırak, bir sonraki açılışta form dolsun
     location.reload();
   };
 
@@ -3620,7 +3633,6 @@ window.renderThemePicker = function () {
   }
 
   async function tryInitFirebase() {
-    // ES module (firebase-init.js) async yüklendiğinden hazır olana kadar bekle
     for (let i = 0; i < 15; i++) {
       if (typeof window.initFirebase === 'function') break;
       await new Promise(r => setTimeout(r, 200));
