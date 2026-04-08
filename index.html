@@ -2488,6 +2488,236 @@ window.makeUID = async function (email, password) {
   <!-- Notifications -->
   <div id="notif-container"></div>
 
+  <!-- ════════════ MODALS ════════════ -->
+
+  <!-- Task Modal -->
+  <div class="modal-overlay hidden" id="modal-task">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="task-modal-title-el">Yeni Görev</h3>
+        <button class="modal-close" data-close-modal="modal-task">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Başlık *</label>
+          <input id="t-title" class="form-input" type="text" placeholder="Görev başlığı">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notlar</label>
+          <textarea id="t-desc" class="form-textarea" placeholder="Açıklama..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Tarih *</label>
+            <input id="t-date" class="form-input" type="date">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Saat</label>
+            <input id="t-time" class="form-input" type="time">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+          <label class="form-label">Öncelik</label>
+          <div class="priority-btns">
+            <button class="priority-btn" data-priority="yuksek">🔴 Yüksek</button>
+            <button class="priority-btn active-orta" data-priority="orta">🟠 Orta</button>
+            <button class="priority-btn" data-priority="dusuk">🟢 Düşük</button>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:4px;">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Tekrar</label>
+            <select id="t-repeat" class="form-select">
+              <option value="none">Tekrarsız</option>
+              <option value="daily">Her gün</option>
+              <option value="weekdays">Hafta içi</option>
+              <option value="weekly">Haftalık</option>
+              <option value="monthly">Aylık</option>
+              <option value="yearly">Yıllık</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Kategori</label>
+            <select id="t-category" class="form-select">
+              <option value="">— Seç —</option>
+              <option>İş</option>
+              <option>Kişisel</option>
+              <option>Toplantı</option>
+              <option>Sağlık</option>
+              <option>Eğitim</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+          <label class="form-label">Kanban Durumu</label>
+          <select id="t-kanban-status" class="form-select">
+            <option value="bekliyor">Bekliyor</option>
+            <option value="devam">Devam Ediyor</option>
+            <option value="tamamlandi">Tamamlandı</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">✉️ E-posta bildirimi</span>
+          <label class="toggle">
+            <input type="checkbox" id="t-email-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div id="t-email-row" style="display:none;" class="form-group">
+          <label class="form-label">Bildirim e-postası</label>
+          <input id="t-email-to" class="form-input" type="email" placeholder="ornek@email.com">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close-modal="modal-task">İptal</button>
+        <button class="btn btn-gold" id="btn-save-task">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates Modal -->
+  <div class="modal-overlay hidden" id="modal-templates">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title">📋 Şablonlar</h3>
+        <button class="modal-close" data-close-modal="modal-templates">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="templates-grid" id="templates-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Config Modal -->
+  <div class="modal-overlay hidden" id="modal-email-cfg">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">✉️ E-posta Ayarları</h3>
+        <button class="modal-close" data-close-modal="modal-email-cfg">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="cfg-section" style="margin-bottom:16px;">
+          <div class="cfg-section-title">Tema</div>
+          <div class="theme-picker" id="theme-picker"></div>
+        </div>
+        <div style="border-top:1px solid var(--border);margin-bottom:16px;"></div>
+        <div class="cfg-section">
+          <div class="cfg-section-title">Hatırlatma Saatleri (en fazla 3)</div>
+          <div class="form-row-3">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Saat 1</label>
+              <input id="ecfg-time1" class="form-input" type="time">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Saat 2</label>
+              <input id="ecfg-time2" class="form-input" type="time">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Saat 3</label>
+              <input id="ecfg-time3" class="form-input" type="time">
+            </div>
+          </div>
+        </div>
+        <div class="cfg-section" style="margin-top:12px;">
+          <div class="cfg-section-title">E-posta Bildirimleri</div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Bildirim Gönderilecek E-posta</label>
+            <input id="ecfg-to" class="form-input" type="email" placeholder="ornek@email.com">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close-modal="modal-email-cfg">İptal</button>
+        <button class="btn btn-gold" id="btn-save-email-cfg">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Tracker Column Modal -->
+  <div class="modal-overlay hidden" id="modal-add-col">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="add-col-title">Yeni Alışkanlık</h3>
+        <button class="modal-close" data-close-modal="modal-add-col">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Emoji</label>
+          <input id="col-emoji-input" class="form-input" type="text" maxlength="2" placeholder="✅"
+                 style="width:60px;text-align:center;font-size:18px;">
+          <div class="emoji-pick-row" id="emoji-picker"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Alışkanlık Adı</label>
+          <input id="col-name-input" class="form-input" type="text" placeholder="Örn: Egzersiz, Okuma...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close-modal="modal-add-col">İptal</button>
+        <button class="btn btn-gold" id="btn-save-col">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Block Modal -->
+  <div class="modal-overlay hidden" id="modal-block">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="block-modal-title">Yeni Blok</h3>
+        <button class="modal-close" data-close-modal="modal-block">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Başlık *</label>
+          <input type="text" id="block-title" class="form-input" placeholder="Toplantı, Geliştirme…">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Başlangıç</label>
+            <input type="time" id="block-start" class="form-input" value="09:00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bitiş</label>
+            <input type="time" id="block-end" class="form-input" value="10:00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tür</label>
+          <div class="block-type-btns" id="block-type-btns">
+            <button class="block-type-btn active" data-type="odak">🎯 Odak</button>
+            <button class="block-type-btn" data-type="toplanti">🤝 Toplantı</button>
+            <button class="block-type-btn" data-type="review">👁 Review</button>
+            <button class="block-type-btn" data-type="mola">☕ Mola</button>
+            <button class="block-type-btn" data-type="serbest">📌 Serbest</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Görev Bağla (opsiyonel)</label>
+          <select id="block-task" class="form-input">
+            <option value="">— Görev seçme —</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btn-delete-block" style="margin-right:auto;display:none">🗑 Sil</button>
+        <button class="btn btn-ghost" data-close-modal="modal-block">İptal</button>
+        <button class="btn btn-gold" id="btn-save-block">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Detail Modal -->
+  <div class="modal-overlay hidden" id="modal-day-detail">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="day-detail-title"></h3>
+        <button class="modal-close" data-close-modal="modal-day-detail">✕</button>
+      </div>
+      <div class="modal-body" id="day-detail-body"></div>
+    </div>
+  </div>
+
+
   <script>
 /* === config.js === */
 /* ============================================================
@@ -5593,7 +5823,6 @@ window.saveFirebaseConfig = async function () {
 };
 
   </script>
-
 
 </body>
 </html>
