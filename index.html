@@ -3828,7 +3828,7 @@ window.renderThemePicker = function () {
     const times = [t1, t2, t3].filter(Boolean);
     window.g_reminders = window.g_reminders || { times: [], tasks: [] };
     window.g_reminders.times = times;
-    lsSet('g_reminders', window.g_reminders);
+    window.saveReminders();
 
     document.getElementById('modal-email-cfg').classList.add('hidden');
 
@@ -3846,6 +3846,7 @@ window.renderThemePicker = function () {
    ============================================================ */
 
 window.initApp = function () {
+  window._appInitialized = true;
   // 0. Kayıtlı temayı uygula
   const savedTheme = lsGet('g_theme', 'rose');
   if (typeof window.applyTheme === 'function') window.applyTheme(savedTheme);
@@ -3972,8 +3973,15 @@ document.getElementById('btn-add-col')?.addEventListener('click', () => window.o
 // Not: btn-save-col onclick'i tracker.js içindeki openAddColumnModal tarafından dinamik set edilir
 
 // ── User dropdown logout ──────────────────────────────────────
-document.getElementById('btn-logout')?.addEventListener('click', window.doLogout);
-document.getElementById('btn-open-settings')?.addEventListener('click', window.openSettings);
+document.getElementById('btn-logout')?.addEventListener('click', () => window.doLogout?.());
+document.getElementById('btn-open-settings')?.addEventListener('click', () => window.openSettings?.());
+
+// ── Session restore düzeltmesi ─────────────────────────────────
+// auth.js bu script'ten önce çalışır. Session restore sırasında hideLogin()
+// çağrıldığında window.initApp henüz tanımlı değildir — burada telafi ediyoruz.
+if (!window._appInitialized && document.getElementById('app')?.style.display === 'flex') {
+  window.initApp();
+}
 
   </script>
   <script>
@@ -5755,13 +5763,27 @@ window.loadFromFirebase = async function () {
   try {
     const all = await window.fbLoadAll();
     const pfx = 'u_' + window._fbUid + '_';
-    if (all.g_tasks)        { lsSet(pfx + 'g_tasks',        all.g_tasks);        window.g_tasks        = all.g_tasks; }
-    if (all.g_notes)        { lsSet(pfx + 'g_notes',        all.g_notes);        window.g_notes        = all.g_notes; }
-    if (all.g_notebooks)    { lsSet(pfx + 'g_notebooks',    all.g_notebooks);    window.g_notebooks    = all.g_notebooks; }
-    if (all.g_reminders)    { lsSet(pfx + 'g_reminders',    all.g_reminders);    window.g_reminders    = all.g_reminders; }
-    if (all.g_tracker)      { lsSet(pfx + 'g_tracker',      all.g_tracker);      window.g_tracker      = all.g_tracker; }
-    if (all.g_tracker_cols) { lsSet(pfx + 'g_tracker_cols', all.g_tracker_cols); window.g_tracker_cols = all.g_tracker_cols; }
-    if (all.g_schedule)     { lsSet(pfx + 'g_schedule',     all.g_schedule);     window.g_schedule     = all.g_schedule; }
+    // Boş array/obje ile yerel veriyi EZME — daha büyük olanı koru
+    const setIfBigger = (key, fbVal, isArr) => {
+      if (fbVal == null) return;
+      const local = lsGet(pfx + key, null);
+      const fbSize = isArr ? (fbVal.length || 0) : Object.keys(fbVal).length;
+      const localSize = local ? (isArr ? (local.length || 0) : Object.keys(local).length) : 0;
+      if (fbSize > localSize) {
+        lsSet(pfx + key, fbVal);
+        window[key] = fbVal;
+      }
+    };
+    setIfBigger('g_tasks',        all.g_tasks,        true);
+    setIfBigger('g_notes',        all.g_notes,        true);
+    setIfBigger('g_notebooks',    all.g_notebooks,    true);
+    setIfBigger('g_tracker_cols', all.g_tracker_cols, true);
+    setIfBigger('g_tracker',      all.g_tracker,      false);
+    setIfBigger('g_schedule',     all.g_schedule,     false);
+    if (all.g_reminders?.times?.length > (window.g_reminders?.times?.length || 0)) {
+      lsSet(pfx + 'g_reminders', all.g_reminders);
+      window.g_reminders = all.g_reminders;
+    }
     console.log('[Pinle] Loaded from Firebase.');
 
     // Buluttan gelen veriyle ekranı yenile
