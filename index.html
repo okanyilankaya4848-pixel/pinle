@@ -732,22 +732,28 @@ img { display: block; max-width: 100%; }
   overflow-x: auto;
   overflow-y: hidden;
   padding: 0 24px 24px;
+  min-height: 0;
+  cursor: grab;
+  user-select: none;
+}
+#view-kanban .kanban-scroll.dragging-scroll {
+  cursor: grabbing;
 }
 .kanban-board {
   display: flex;
   gap: 16px;
   height: 100%;
-  min-width: max-content;
 }
 .kanban-col {
-  width: 300px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 260px;
   display: flex;
   flex-direction: column;
   background: var(--s1);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  min-height: 0;
 }
 .kanban-col-header {
   display: flex;
@@ -5299,6 +5305,49 @@ function _initKanbanDragDrop() {
     });
   });
 }
+
+// ── Kanban Kaydırma (tutup sürükleme) ────────────────────────
+(function () {
+  const scroll = document.querySelector('#view-kanban .kanban-scroll');
+  if (!scroll) return;
+
+  let isDown = false, startX = 0, scrollLeft = 0;
+
+  scroll.addEventListener('mousedown', e => {
+    // Kart, buton veya input üzerine tıklama — kaydırma başlatma
+    if (e.target.closest('.kanban-task, button, input, select')) return;
+    isDown = true;
+    startX = e.pageX - scroll.offsetLeft;
+    scrollLeft = scroll.scrollLeft;
+    scroll.classList.add('dragging-scroll');
+  });
+
+  document.addEventListener('mouseup', () => {
+    isDown = false;
+    scroll.classList.remove('dragging-scroll');
+  });
+
+  scroll.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x    = e.pageX - scroll.offsetLeft;
+    const walk = (x - startX) * 1.2;
+    scroll.scrollLeft = scrollLeft - walk;
+  });
+
+  // Dokunmatik destek
+  let touchStartX = 0, touchScrollLeft = 0;
+  scroll.addEventListener('touchstart', e => {
+    if (e.target.closest('.kanban-task, button, input, select')) return;
+    touchStartX    = e.touches[0].pageX;
+    touchScrollLeft = scroll.scrollLeft;
+  }, { passive: true });
+
+  scroll.addEventListener('touchmove', e => {
+    const dx = touchStartX - e.touches[0].pageX;
+    scroll.scrollLeft = touchScrollLeft + dx;
+  }, { passive: true });
+})();
 
 // ── Swimlane değiştirme ──────────────────────────────────────
 document.getElementById('kanban-swimlane-select')?.addEventListener('change', function () {
