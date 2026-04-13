@@ -786,14 +786,44 @@ img { display: block; max-width: 100%; }
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   cursor: pointer;
+  position: relative;
   transition: all var(--transition);
 }
+.kanban-delete-btn {
+  position: absolute; top: 6px; right: 6px;
+  background: none; border: none;
+  color: var(--text3); font-size: 11px;
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  cursor: pointer; opacity: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  padding: 0;
+}
+.kanban-task:hover .kanban-delete-btn { opacity: 1; }
+.kanban-delete-btn:hover { background: var(--red); color: #fff; }
 .kanban-task:hover { border-color: var(--border2); background: var(--s3); }
 .kanban-task.priority-yuksek { border-left-color: var(--red); }
 .kanban-task.priority-orta { border-left-color: var(--orange); }
 .kanban-task.priority-dusuk { border-left-color: var(--green); }
 .kanban-task-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
 .kanban-task-meta { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.kanban-work-row {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 7px; padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.kanban-assignee {
+  font-size: 11px; color: var(--text2);
+  background: var(--s3); border-radius: 99px;
+  padding: 2px 8px;
+}
+.kanban-estimate {
+  font-size: 11px; color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  border-radius: 99px; padding: 2px 8px;
+}
 
 /* ── Weekly View ───────────────────────────────────────────── */
 #view-weekly .weekly-scroll {
@@ -1172,6 +1202,18 @@ img { display: block; max-width: 100%; }
   width: 48px; text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.sch-half-line {
+  position: absolute; left: -56px; right: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
+  pointer-events: none;
+}
+.sch-half-label {
+  font-size: 10px; color: var(--text3);
+  position: absolute; left: 4px; top: -7px;
+  width: 48px; text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
 
 .sch-now-line {
   position: absolute; left: 0; right: 0;
@@ -1199,14 +1241,37 @@ img { display: block; max-width: 100%; }
   border-left: 3px solid var(--gold);
   border-radius: var(--radius-sm);
   padding: 4px 8px;
-  cursor: pointer; z-index: 2;
+  cursor: grab; z-index: 2;
   overflow: hidden;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, box-shadow 0.1s;
+  user-select: none;
 }
-.sch-block:hover { background: var(--s3); transform: translateX(2px); }
+.sch-block:hover { background: var(--s3); }
+.sch-block.dragging {
+  cursor: grabbing; z-index: 10;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  opacity: 0.92;
+  transition: none;
+}
 .sch-block-time { font-size: 10px; color: var(--text3); margin-bottom: 1px; }
 .sch-block-title { font-size: 12px; font-weight: 600; color: var(--text); }
 .sch-block-task { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.sch-block.done { opacity: 0.55; }
+.sch-block.done .sch-block-title { text-decoration: line-through; color: var(--text3); }
+.sch-block.done .sch-block-time  { text-decoration: line-through; }
+.sch-block-done-btn {
+  position: absolute; top: 5px; right: 5px;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid var(--border1); background: var(--s1);
+  color: var(--text3); font-size: 11px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+  padding: 0;
+}
+.sch-block:hover .sch-block-done-btn { opacity: 1; }
+.sch-block-done-btn.checked {
+  opacity: 1; background: var(--green); border-color: var(--green); color: #fff;
+}
 
 /* ── Weekly grid ── */
 .sch-week-wrap {
@@ -1247,6 +1312,11 @@ img { display: block; max-width: 100%; }
 .sch-week-grid-line {
   position: absolute; left: 0; right: 0;
   border-top: 1px solid var(--border);
+  pointer-events: none;
+}
+.sch-week-half-line {
+  position: absolute; left: 0; right: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
   pointer-events: none;
 }
 .sch-week-block {
@@ -1960,6 +2030,291 @@ img { display: block; max-width: 100%; }
   .weekly-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   YENİ ÖZELLİKLER — Tags, Subtasks, Dependencies, Search,
+   Pomodoro, Quick Capture, Stats, Swimlane, D&D
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Etiketler (Tags) ──────────────────────────────────────── */
+.task-badge.tag {
+  background: color-mix(in srgb, var(--purple) 15%, transparent);
+  color: var(--purple); cursor: pointer;
+}
+.task-badge.tag:hover { background: color-mix(in srgb, var(--purple) 25%, transparent); }
+.task-badge.blocked {
+  background: color-mix(in srgb, var(--orange, #e67e22) 15%, transparent);
+  color: var(--orange, #e67e22);
+}
+.task-card.is-blocked { opacity: 0.75; }
+.kanban-task.is-blocked { opacity: 0.75; }
+.kanban-blocked-badge {
+  font-size: 10px; color: var(--orange, #e67e22);
+  margin: 2px 0 4px; padding: 2px 6px;
+  background: color-mix(in srgb, var(--orange, #e67e22) 10%, transparent);
+  border-radius: 4px;
+}
+.nav-tag-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 10%, transparent);
+  border-radius: 99px; padding: 3px 8px; margin: 2px;
+  cursor: pointer; transition: background 0.15s;
+}
+.nav-tag-chip:hover { background: color-mix(in srgb, var(--purple) 20%, transparent); }
+
+/* ── Alt Görevler (Subtasks) ───────────────────────────────── */
+.subtask-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.subtask-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 6px; border-radius: 6px;
+  background: var(--s2);
+}
+.subtask-check {
+  width: 16px; height: 16px; border-radius: 4px;
+  border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; cursor: pointer; flex-shrink: 0;
+  transition: all 0.15s;
+}
+.subtask-check.done { background: var(--green); border-color: var(--green); color: var(--bg); }
+.subtask-text { flex: 1; font-size: 12px; color: var(--text); }
+.subtask-text.done { text-decoration: line-through; color: var(--text3); }
+.subtask-del {
+  background: none; border: none; color: var(--text3);
+  font-size: 10px; cursor: pointer; padding: 2px 4px; border-radius: 4px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.subtask-item:hover .subtask-del { opacity: 1; }
+.subtask-del:hover { color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
+.subtask-add-row { display: flex; gap: 6px; margin-top: 4px; }
+.subtask-add-row .form-input { flex: 1; }
+.subtask-progress {
+  height: 3px; background: var(--border); border-radius: 99px;
+  margin-top: 6px; overflow: hidden;
+}
+.subtask-progress-bar {
+  height: 100%; background: var(--green); border-radius: 99px;
+  transition: width 0.3s;
+}
+.subtask-progress-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.kanban-subtask-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.kanban-subtask-row .subtask-progress { flex: 1; margin-top: 0; }
+.kanban-pomo-btn {
+  position: absolute; top: 6px; right: 28px;
+  background: none; border: none; font-size: 12px;
+  cursor: pointer; opacity: 0; padding: 2px 3px; border-radius: 4px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.kanban-task:hover .kanban-pomo-btn { opacity: 1; }
+.kanban-pomo-btn:hover { background: color-mix(in srgb, var(--gold) 15%, transparent); }
+.kanban-order-btn {
+  position: absolute; background: none; border: none;
+  font-size: 9px; cursor: pointer; opacity: 0; padding: 1px 3px;
+  border-radius: 3px; color: var(--text3); line-height: 1;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.kanban-order-btn.up   { bottom: 26px; left: 4px; }
+.kanban-order-btn.down { bottom: 6px;  left: 4px; }
+.kanban-task:hover .kanban-order-btn { opacity: 1; }
+.kanban-order-btn:hover { background: var(--s4); color: var(--text1); }
+.kanban-move-row {
+  display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap;
+  opacity: 0; transition: opacity 0.15s;
+}
+.kanban-task:hover .kanban-move-row { opacity: 1; }
+.kanban-move-btn {
+  flex: 1; min-width: 0;
+  font-size: 10px; padding: 3px 6px; border-radius: 6px;
+  border: 1px solid var(--border1); background: var(--s2);
+  color: var(--text2); cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.kanban-move-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ── Global Arama ──────────────────────────────────────────── */
+.search-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--s2); border: 1px solid var(--border2);
+  border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  z-index: 300; max-height: 420px; overflow-y: auto; padding: 8px 0;
+}
+.search-panel.hidden { display: none; }
+.search-group-title {
+  font-size: 10px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 8px 14px 4px;
+}
+.search-result-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 14px; cursor: pointer; transition: background 0.12s;
+}
+.search-result-item:hover { background: var(--s3); }
+.search-result-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.search-result-title { font-size: 13px; color: var(--text); }
+.search-result-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.search-empty { padding: 16px 14px; font-size: 13px; color: var(--text3); text-align: center; }
+
+/* ── Pomodoro Widget ───────────────────────────────────────── */
+.pomo-widget {
+  position: fixed; bottom: 24px; right: 24px; z-index: 400;
+  background: var(--s2); border: 1px solid var(--border2);
+  border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  padding: 16px 20px; width: 200px; text-align: center;
+  transition: box-shadow 0.2s;
+}
+.pomo-widget.hidden { display: none; }
+.pomo-widget[data-mode="break"] { border-color: var(--green); }
+.pomo-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.pomo-task-name {
+  font-size: 11px; color: var(--text3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 140px; text-align: left;
+}
+.pomo-close-btn {
+  background: none; border: none; color: var(--text3); font-size: 12px;
+  cursor: pointer; padding: 2px 4px; border-radius: 4px;
+}
+.pomo-close-btn:hover { color: var(--text); background: var(--s3); }
+.pomo-timer {
+  font-size: 36px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums; letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+.pomo-mode { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+.pomo-mode[data-mode="break"] { color: var(--green); }
+.pomo-controls {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.pomo-controls button {
+  background: var(--s3); border: 1px solid var(--border);
+  color: var(--text2); width: 32px; height: 32px; border-radius: 50%;
+  cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.pomo-controls button:hover { background: var(--border2); color: var(--text); }
+.pomo-main-btn { width: 44px !important; height: 44px !important; font-size: 16px !important; background: var(--gold) !important; color: var(--bg) !important; border-color: var(--gold) !important; }
+.pomo-main-btn:hover { filter: brightness(1.1); }
+.pomo-sessions { font-size: 14px; min-height: 18px; }
+
+/* ── Hızlı Yakalama ───────────────────────────────────────── */
+.quick-capture-fab {
+  background: var(--s3); border: 1px solid var(--border2);
+  color: var(--text2); width: 32px; height: 32px; border-radius: 50%;
+  font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.quick-capture-fab:hover { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+.quick-panel {
+  position: fixed; bottom: 80px; right: 24px; z-index: 390;
+  background: var(--s2); border: 1px solid var(--border2);
+  border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  padding: 14px; width: 280px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.quick-panel.hidden { display: none; }
+.quick-panel-title { font-size: 12px; font-weight: 700; color: var(--text2); }
+.quick-panel-row { display: flex; gap: 8px; }
+.quick-panel-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+
+/* ── İstatistikler ─────────────────────────────────────────── */
+.stats-scroll { flex: 1; overflow-y: auto; padding: 20px 24px; }
+#stats-dashboard { max-width: 700px; }
+.stats-kpi-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  margin-bottom: 24px;
+}
+.stats-kpi-card {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  text-align: center;
+}
+.stats-kpi-card.green  { border-color: color-mix(in srgb, var(--green)  30%, transparent); }
+.stats-kpi-card.gold   { border-color: color-mix(in srgb, var(--gold)   30%, transparent); }
+.stats-kpi-card.red    { border-color: color-mix(in srgb, var(--red)    30%, transparent); }
+.stats-kpi-card.purple { border-color: color-mix(in srgb, var(--purple) 30%, transparent); }
+.stats-kpi-card.fire   { border-color: color-mix(in srgb, var(--gold)   30%, transparent); }
+.stats-kpi-val { font-size: 28px; font-weight: 700; color: var(--text); }
+.stats-kpi-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.stats-section {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 16px;
+}
+.stats-section-title { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+.stats-bar-chart { display: flex; gap: 8px; align-items: flex-end; height: 100px; }
+.stats-bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 3px; }
+.stats-bar-wrap {
+  position: relative; width: 100%; flex: 1;
+  display: flex; align-items: flex-end; gap: 2px;
+}
+.stats-bar-bg {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: var(--border2); border-radius: 3px 3px 0 0;
+  transition: height 0.4s;
+}
+.stats-bar-fill {
+  position: absolute; bottom: 0; left: 2px; right: 2px;
+  background: var(--gold); border-radius: 3px 3px 0 0;
+  transition: height 0.4s;
+}
+.stats-bar-label { font-size: 10px; color: var(--text3); }
+.stats-bar-label.today { color: var(--gold); font-weight: 700; }
+.stats-bar-count { font-size: 9px; color: var(--text3); }
+.stats-kanban-row { display: flex; gap: 12px; }
+.stats-kb-col {
+  flex: 1; background: var(--s3); border-radius: var(--radius-sm);
+  padding: 14px; text-align: center;
+}
+.stats-kb-col.gold   { border-top: 2px solid var(--gold); }
+.stats-kb-col.blue   { border-top: 2px solid var(--blue); }
+.stats-kb-col.green  { border-top: 2px solid var(--green); }
+.stats-kb-val { font-size: 24px; font-weight: 700; color: var(--text); }
+.stats-kb-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.stats-cat-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.stats-cat-label { font-size: 12px; color: var(--text2); width: 90px; flex-shrink: 0; }
+.stats-cat-bar-wrap {
+  flex: 1; height: 6px; background: var(--border);
+  border-radius: 99px; overflow: hidden;
+}
+.stats-cat-bar { height: 100%; background: var(--gold); border-radius: 99px; transition: width 0.4s; }
+.stats-cat-bar.assignee { background: var(--blue); }
+.stats-cat-count { font-size: 11px; color: var(--text3); width: 50px; text-align: right; }
+.stats-tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.stats-tag-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: color-mix(in srgb, var(--purple) 15%, transparent);
+  color: var(--purple); font-size: 12px; padding: 4px 10px;
+  border-radius: 99px;
+}
+.stats-tag-count {
+  background: var(--purple); color: var(--bg); font-size: 10px;
+  padding: 1px 5px; border-radius: 99px;
+}
+
+/* ── Kanban D&D + Swimlane ─────────────────────────────────── */
+.kanban-task[draggable] { cursor: grab; }
+.kanban-task.dragging { opacity: 0.4; cursor: grabbing; }
+.kanban-cards.drag-over {
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
+  outline: 1px dashed var(--gold); outline-offset: -4px;
+}
+.kanban-empty { color: var(--text3); font-size: 12px; text-align: center; padding: 20px 0; }
+.kanban-swimlane { margin-bottom: 24px; }
+.kanban-swimlane-label {
+  font-size: 12px; font-weight: 600; color: var(--text2);
+  padding: 6px 0; margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.kanban-swimlane-cols { display: flex; gap: 16px; }
+
   </style>
 
   <script type="module">
@@ -2188,9 +2543,10 @@ window.makeUID = async function (email, password) {
         </svg>
         <span>Pinle</span>
       </div>
-      <div class="topbar-search">
+      <div class="topbar-search" style="position:relative;">
         <span class="search-icon">🔍</span>
-        <input type="text" id="topbar-search" placeholder="Görev veya not ara...">
+        <input type="text" id="topbar-search" placeholder="Görev, not veya program ara... (Ctrl+K)">
+        <div id="search-results-panel" class="search-panel hidden"></div>
       </div>
       <div class="topbar-right">
         <div class="streak-badge" id="streakBadge">🔥 0 gün serisi</div>
@@ -2199,6 +2555,7 @@ window.makeUID = async function (email, password) {
         <button class="btn btn-gold" id="btn-new-task">
           <span>+</span> Yeni Görev
         </button>
+        <button class="quick-capture-fab" id="btn-quick-capture" title="Hızlı Ekle (Ctrl+Space)">⚡</button>
         <div class="user-menu-wrap">
           <div class="user-avatar" id="userAvatar">?</div>
           <div class="user-dropdown" id="userDropdown">
@@ -2249,6 +2606,10 @@ window.makeUID = async function (email, password) {
           <div class="nav-item" data-nav="schedule">
             <span class="nav-icon">🗓</span>
             <span>Program</span>
+          </div>
+          <div class="nav-item" data-nav="stats">
+            <span class="nav-icon">📈</span>
+            <span>İstatistikler</span>
           </div>
         </div>
 
@@ -2373,6 +2734,13 @@ window.makeUID = async function (email, password) {
         <div class="view" id="view-kanban">
           <div class="view-header">
             <h2 class="view-title">📋 Kanban</h2>
+            <div class="view-header-right">
+              <select id="kanban-swimlane-select" class="sort-select">
+                <option value="none">Swimlane: Yok</option>
+                <option value="assignee">Sorumluya Göre</option>
+                <option value="priority">Önceliğe Göre</option>
+              </select>
+            </div>
           </div>
           <div class="kanban-scroll">
             <div class="kanban-board" id="kanban-board"></div>
@@ -2481,9 +2849,53 @@ window.makeUID = async function (email, password) {
           </div>
         </div>
 
+        <!-- VIEW: İstatistikler -->
+        <div class="view" id="view-stats">
+          <div class="view-header">
+            <h2 class="view-title">📈 İstatistikler</h2>
+          </div>
+          <div class="stats-scroll">
+            <div id="stats-dashboard"></div>
+          </div>
+        </div>
+
       </div><!-- /main -->
     </div><!-- /body-wrap -->
   </div><!-- /app -->
+
+  <!-- Pomodoro Widget -->
+  <div id="pomodoro-widget" class="pomo-widget hidden">
+    <div class="pomo-header">
+      <span class="pomo-task-name" id="pomo-task"></span>
+      <button id="pomo-close" class="pomo-close-btn" title="Kapat">✕</button>
+    </div>
+    <div class="pomo-timer" id="pomo-timer">25:00</div>
+    <div class="pomo-mode" id="pomo-mode" data-mode="work">🎯 Odak</div>
+    <div class="pomo-controls">
+      <button id="pomo-reset" title="Sıfırla">↺</button>
+      <button id="pomo-toggle" class="pomo-main-btn">▶</button>
+      <button id="pomo-skip"  title="Atla">⏭</button>
+    </div>
+    <div class="pomo-sessions" id="pomo-sessions"></div>
+  </div>
+
+  <!-- Hızlı Yakalama Paneli -->
+  <div id="quick-capture-panel" class="quick-panel hidden">
+    <div class="quick-panel-title">⚡ Hızlı Ekle</div>
+    <input id="qc-title" class="form-input" type="text" placeholder="Görev başlığı...">
+    <div class="quick-panel-row">
+      <input id="qc-date" class="form-input" type="date" style="flex:1">
+      <select id="qc-priority" class="form-select" style="flex:1">
+        <option value="orta">🟠 Orta</option>
+        <option value="yuksek">🔴 Yüksek</option>
+        <option value="dusuk">🟢 Düşük</option>
+      </select>
+    </div>
+    <div class="quick-panel-actions">
+      <button class="btn btn-ghost btn-sm" id="qc-full">Tam Form</button>
+      <button class="btn btn-gold btn-sm" id="qc-save">Kaydet</button>
+    </div>
+  </div>
 
   <!-- Notifications -->
   <div id="notif-container"></div>
@@ -2566,6 +2978,33 @@ window.makeUID = async function (email, password) {
         <div id="t-email-row" style="display:none;" class="form-group">
           <label class="form-label">Bildirim e-postası</label>
           <input id="t-email-to" class="form-input" type="email" placeholder="ornek@email.com">
+        </div>
+
+        <!-- Etiketler -->
+        <div class="form-group" style="margin-top:12px;">
+          <label class="form-label">🏷 Etiketler</label>
+          <div class="tag-input-wrap">
+            <div id="task-tag-chips"></div>
+            <input type="text" class="tag-add-input" id="task-tag-input" placeholder="#etiket — Enter ile ekle">
+          </div>
+        </div>
+
+        <!-- Bağımlılık -->
+        <div class="form-group" style="margin-top:4px;">
+          <label class="form-label">🔗 Bağımlılık (önce bu görev bitmeli)</label>
+          <select id="t-depends-on" class="form-select">
+            <option value="">— Bağımlılık yok —</option>
+          </select>
+        </div>
+
+        <!-- Alt Görevler -->
+        <div class="form-group" style="margin-top:12px;">
+          <label class="form-label">☑ Alt Görevler</label>
+          <div id="subtask-list" class="subtask-list"></div>
+          <div class="subtask-add-row">
+            <input id="subtask-input" class="form-input" type="text" placeholder="Alt görev ekle...">
+            <button class="btn btn-ghost btn-sm" id="btn-add-subtask">+</button>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -2695,6 +3134,15 @@ window.makeUID = async function (email, password) {
           <label class="form-label">Görev Bağla (opsiyonel)</label>
           <select id="block-task" class="form-input">
             <option value="">— Görev seçme —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">🔄 Tekrar</label>
+          <select id="block-repeat" class="form-select">
+            <option value="none">Tekrarsız</option>
+            <option value="daily">Her gün</option>
+            <option value="weekdays">Hafta içi</option>
+            <option value="weekly">Haftalık</option>
           </select>
         </div>
       </div>
@@ -3150,6 +3598,7 @@ window.updateStats = function () {
   }
 
   window.updateStreak();
+  if (typeof window.updateNavTags === 'function') window.updateNavTags();
 };
 
 // ── Nav counts for notebooks ──────────────────────────────────
@@ -3174,35 +3623,104 @@ window.updateNavNotebooks = function () {
 // ── Search ────────────────────────────────────────────────────
 window.doSearch = function (q) {
   q = q.toLowerCase().trim();
+
+  const panel = document.getElementById('search-results-panel');
+
   if (!q) {
-    window.setNav(window.curNav);
+    if (panel) panel.classList.add('hidden');
     return;
   }
 
-  const filtered = (window.g_tasks || []).filter(t =>
+  // Tasks
+  const taskHits = (window.g_tasks || []).filter(t =>
     t.title.toLowerCase().includes(q) ||
-    (t.desc || '').toLowerCase().includes(q)
+    (t.desc || '').toLowerCase().includes(q) ||
+    (t.assignee || '').toLowerCase().includes(q) ||
+    (t.tags || []).join(' ').toLowerCase().includes(q) ||
+    (t.category || '').toLowerCase().includes(q)
   );
 
-  const container = document.getElementById('tasks-container');
-  const views = document.querySelectorAll('.view');
-  views.forEach(v => v.classList.remove('active'));
-  document.getElementById('view-list').classList.add('active');
+  // Notes
+  const noteHits = (window.g_notes || []).filter(n =>
+    (n.title || '').toLowerCase().includes(q) ||
+    (n.content || '').replace(/<[^>]*>/g, '').toLowerCase().includes(q)
+  );
 
-  if (!container) return;
-  if (filtered.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>Bulunamadı</h3><p>"${q}" için sonuç yok.</p></div>`;
+  // Schedule blocks
+  const blockHits = [];
+  Object.entries(window.g_schedule || {}).forEach(([key, blocks]) => {
+    (blocks || []).forEach(b => {
+      if ((b.title || '').toLowerCase().includes(q)) {
+        blockHits.push({ ...b, _key: key });
+      }
+    });
+  });
+
+  if (!panel) return;
+
+  if (!taskHits.length && !noteHits.length && !blockHits.length) {
+    panel.innerHTML = `<div class="search-empty">🔍 "${q}" için sonuç bulunamadı</div>`;
+    panel.classList.remove('hidden');
     return;
   }
-  window._renderTaskCards(filtered, container);
+
+  let html = '';
+
+  if (taskHits.length) {
+    html += `<div class="search-group-title">📌 Görevler (${taskHits.length})</div>`;
+    html += taskHits.slice(0, 5).map(t => `
+      <div class="search-result-item" onclick="window.setNav('list');document.getElementById('search-results-panel').classList.add('hidden');">
+        <span class="search-result-icon">📌</span>
+        <div>
+          <div class="search-result-title">${escSearchHtml(t.title)}</div>
+          ${t.category ? `<div class="search-result-meta">${escSearchHtml(t.category)}</div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  if (noteHits.length) {
+    html += `<div class="search-group-title">📝 Notlar (${noteHits.length})</div>`;
+    html += noteHits.slice(0, 4).map(n => `
+      <div class="search-result-item" onclick="window.setNav('notes');window.openNote&&window.openNote('${n.id}');document.getElementById('search-results-panel').classList.add('hidden');">
+        <span class="search-result-icon">📝</span>
+        <div class="search-result-title">${escSearchHtml(n.title || 'Başlıksız Not')}</div>
+      </div>`).join('');
+  }
+
+  if (blockHits.length) {
+    html += `<div class="search-group-title">🗓 Program (${blockHits.length})</div>`;
+    html += blockHits.slice(0, 3).map(b => `
+      <div class="search-result-item" onclick="window.switchToDay&&window.switchToDay('${b._key}');window.setNav('schedule');document.getElementById('search-results-panel').classList.add('hidden');">
+        <span class="search-result-icon">🗓</span>
+        <div>
+          <div class="search-result-title">${escSearchHtml(b.title)}</div>
+          <div class="search-result-meta">${b._key} · ${b.start}–${b.end}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  panel.innerHTML = html;
+  panel.classList.remove('hidden');
 };
 
-// ── Close all dropdowns/menus on outside click ─────────────────
+function escSearchHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Close dropdowns / search panel on outside click ──────────
 document.addEventListener('click', (e) => {
+  // Search panel
+  const panel  = document.getElementById('search-results-panel');
+  const search = document.getElementById('topbar-search');
+  if (panel && search && !panel.contains(e.target) && !search.contains(e.target)) {
+    panel.classList.add('hidden');
+  }
+
   // User dropdown
-  const udrop = document.getElementById('userDropdown');
+  const udrop   = document.getElementById('userDropdown');
   const uavatar = document.getElementById('userAvatar');
-  if (udrop && !udrop.contains(e.target) && !uavatar.contains(e.target)) {
+  if (udrop && uavatar && !udrop.contains(e.target) && !uavatar.contains(e.target)) {
     udrop.classList.remove('open');
   }
 
@@ -3920,8 +4438,9 @@ window.initApp = function () {
   // 9. Update stats
   window.updateStats();
 
-  // 10. Update nav notebooks
+  // 10. Update nav notebooks + tags
   window.updateNavNotebooks();
+  if (typeof window.updateNavTags === 'function') window.updateNavTags();
 
   // Sayfa kapanırken state kaydet (Firebase sync zaten scheduleSync ile olur)
   window.addEventListener('beforeunload', () => {
@@ -3935,6 +4454,79 @@ window.initApp = function () {
 document.getElementById('btn-new-task')?.addEventListener('click', () => {
   window.openTaskModal(null);
 });
+
+// ── Hızlı Yakalama ────────────────────────────────────────────
+(function () {
+  const btn   = document.getElementById('btn-quick-capture');
+  const panel = document.getElementById('quick-capture-panel');
+  if (!btn || !panel) return;
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) {
+      document.getElementById('qc-title')?.focus();
+      // Bugünün tarihini doldur
+      const dateEl = document.getElementById('qc-date');
+      if (dateEl && !dateEl.value) dateEl.value = window.todayStr ? window.todayStr() : new Date().toISOString().slice(0,10);
+    }
+  });
+
+  document.getElementById('qc-save')?.addEventListener('click', () => {
+    const titleEl = document.getElementById('qc-title');
+    const title   = titleEl?.value.trim();
+    if (!title) { titleEl?.focus(); return; }
+
+    const task = {
+      id:          Date.now().toString(),
+      title,
+      desc:        '',
+      date:        document.getElementById('qc-date')?.value || window.todayStr(),
+      time:        '',
+      priority:    document.getElementById('qc-priority')?.value || 'orta',
+      repeat:      'none',
+      category:    null,
+      emailAlert:  false,
+      emailTo:     '',
+      kanbanStatus:'bekliyor',
+      done:        false,
+      createdAt:   Date.now(),
+      tags:        [],
+      subtasks:    []
+    };
+
+    window.g_tasks.push(task);
+    window.saveTask();
+    window.setNav(window.curNav);
+    window.updateStats();
+    showNotif('📌', 'Görev Eklendi', `"${title}" eklendi.`);
+
+    titleEl.value = '';
+    panel.classList.add('hidden');
+  });
+
+  document.getElementById('qc-full')?.addEventListener('click', () => {
+    const title = document.getElementById('qc-title')?.value.trim() || '';
+    panel.classList.add('hidden');
+    window.openTaskModal(null);
+    if (title) setTimeout(() => { const el = document.getElementById('t-title'); if (el) el.value = title; }, 50);
+  });
+
+  // Ctrl+Space klavye kısayolu
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
+      e.preventDefault();
+      btn.click();
+    }
+  });
+
+  // Dışarı tıklanınca kapat
+  document.addEventListener('click', e => {
+    if (!panel.contains(e.target) && !btn.contains(e.target)) {
+      panel.classList.add('hidden');
+    }
+  });
+})();
 
 // ── Modal close buttons ───────────────────────────────────────
 document.querySelectorAll('[data-close-modal]').forEach(btn => {
@@ -4002,17 +4594,18 @@ if (!window._appInitialized && document.getElementById('app')?.style.display ===
    navigation.js — View routing and nav menu
    ============================================================ */
 
-const VIEW_IDS = ['list', 'kanban', 'weekly', 'notes', 'tracker', 'schedule'];
+const VIEW_IDS = ['list', 'kanban', 'weekly', 'notes', 'tracker', 'schedule', 'stats'];
 
 const VIEW_RENDERERS = {
-  today:   () => window.renderTaskList('today'),
-  upcoming:() => window.renderTaskList('upcoming'),
-  list:    () => window.renderTaskList('all'),
-  kanban:  () => window.renderKanban(),
-  weekly:  () => window.renderWeekly(),
-  notes:   () => window.renderNotes(),
+  today:    () => window.renderTaskList('today'),
+  upcoming: () => window.renderTaskList('upcoming'),
+  list:     () => window.renderTaskList('all'),
+  kanban:   () => window.renderKanban(),
+  weekly:   () => window.renderWeekly(),
+  notes:    () => window.renderNotes(),
   tracker:  () => window.renderTracker(),
-  schedule: () => window.renderSchedule()
+  schedule: () => window.renderSchedule(),
+  stats:    () => window.renderStats && window.renderStats()
 };
 
 /**
@@ -4032,7 +4625,8 @@ window.setNav = function (nav, el) {
     weekly:   'view-weekly',
     notes:    'view-notes',
     tracker:  'view-tracker',
-    schedule: 'view-schedule'
+    schedule: 'view-schedule',
+    stats:    'view-stats'
   };
 
   // Hide all views
@@ -4139,8 +4733,15 @@ function nextRepeat(date, repeat) {
   return d;
 }
 
+// Swimlane state
+window.kanbanSwimlane = 'none'; // 'none' | 'assignee' | 'priority'
+
 // ── Filter tasks ──────────────────────────────────────────────
 function filterTasks(tasks, mode) {
+  if (mode && mode.startsWith('tag:')) {
+    const tag = mode.slice(4);
+    return tasks.filter(t => (t.tags || []).includes(tag));
+  }
   switch (mode) {
     case 'yuksek': return tasks.filter(t => t.priority === 'yuksek' && !t.done);
     case 'orta':   return tasks.filter(t => t.priority === 'orta'   && !t.done);
@@ -4172,10 +4773,12 @@ function sortTasks(tasks, mode) {
 
 // ── Build task card HTML ──────────────────────────────────────
 function buildTaskCard(task) {
-  const isVirtual = task._isVirtual;
   const realId = task.id.replace(/_r\d{4}-\d{2}-\d{2}$/, '');
-
   const priorityIcon = { yuksek: '🔴', orta: '🟠', dusuk: '🟢' };
+
+  // Dependency check
+  const blocker = task.dependsOn ? findTask(task.dependsOn) : null;
+  const isBlocked = blocker && !blocker.done;
 
   let meta = '';
   if (task.date) meta += `<span class="task-badge date">📅 ${window.formatDate(task.date)}</span>`;
@@ -4183,17 +4786,35 @@ function buildTaskCard(task) {
   if (task.category) meta += `<span class="task-badge cat">🏷 ${task.category}</span>`;
   if (task.repeat && task.repeat !== 'none') meta += `<span class="task-badge repeat">🔄 ${REPEAT_LABELS[task.repeat]}</span>`;
   if (task.emailAlert) meta += `<span class="task-badge email">✉️</span>`;
+  if (isBlocked) meta += `<span class="task-badge blocked">🔒 ${escHtml((blocker.title || '').slice(0,20))}</span>`;
   meta += `<span class="task-badge badge-priority-${task.priority}">${priorityIcon[task.priority] || ''} ${PRIORITY_LABELS[task.priority] || task.priority}</span>`;
 
+  // Tags
+  const tagsHtml = (task.tags || []).map(tag =>
+    `<span class="task-badge tag" onclick="window.filterByTag('${escHtml(tag)}',event)">${escHtml(tag)}</span>`
+  ).join('');
+
+  // Subtasks progress
+  const subs = task.subtasks || [];
+  const subDone = subs.filter(s => s.done).length;
+  const subProgressHtml = subs.length > 0 ? `
+    <div class="subtask-progress">
+      <div class="subtask-progress-bar" style="width:${Math.round(subDone/subs.length*100)}%"></div>
+    </div>
+    <span class="subtask-progress-label">${subDone}/${subs.length} alt görev</span>
+  ` : '';
+
   return `
-    <div class="task-card priority-${task.priority} ${task.done ? 'done' : ''}" data-id="${task.id}" data-real-id="${realId}">
-      <div class="task-check ${task.done ? 'checked' : ''}" data-id="${realId}" onclick="toggleTaskDone('${realId}', event)">
+    <div class="task-card priority-${task.priority} ${task.done ? 'done' : ''} ${isBlocked ? 'is-blocked' : ''}"
+         data-id="${task.id}" data-real-id="${realId}">
+      <div class="task-check ${task.done ? 'checked' : ''}" onclick="toggleTaskDone('${realId}', event)">
         ${task.done ? '✓' : ''}
       </div>
       <div class="task-body">
         <div class="task-title">${escHtml(task.title)}</div>
         ${task.desc ? `<div class="task-desc">${escHtml(task.desc)}</div>` : ''}
-        <div class="task-meta">${meta}</div>
+        <div class="task-meta">${meta}${tagsHtml}</div>
+        ${subProgressHtml}
       </div>
       <div class="task-actions">
         <button title="Düzenle" onclick="openTaskModal('${realId}', event)">✏️</button>
@@ -4202,6 +4823,14 @@ function buildTaskCard(task) {
     </div>
   `;
 }
+
+// ── Filter by tag ─────────────────────────────────────────────
+window.filterByTag = function (tag, e) {
+  if (e) e.stopPropagation();
+  window.filterMode = 'tag:' + tag;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  window.setNav(window.curNav);
+};
 
 // ── Render task list ──────────────────────────────────────────
 window.renderTaskList = function (scope) {
@@ -4221,7 +4850,7 @@ window.renderTaskList = function (scope) {
     const title = document.getElementById('view-list-title');
     if (title) title.textContent = '📅 Bugün';
   } else if (scope === 'upcoming') {
-    tasks = tasks.filter(t => t.date > todayS && !t.done);
+    tasks = tasks.filter(t => t.date > todayS);
     const title = document.getElementById('view-list-title');
     if (title) title.textContent = '🔮 Yaklaşan';
   } else {
@@ -4315,6 +4944,26 @@ window.openTaskModal = function (id, e) {
   const ksEl = document.getElementById('t-kanban-status');
   if (ksEl) ksEl.value = task ? (task.kanbanStatus || 'bekliyor') : 'bekliyor';
 
+  // Sorumlu & Tahmini süre
+  const assigneeEl = document.getElementById('t-assignee');
+  const estimateEl = document.getElementById('t-estimate');
+  if (assigneeEl) assigneeEl.value = task ? (task.assignee || '') : '';
+  if (estimateEl) estimateEl.value = task ? (task.estimate || '') : '';
+
+  // Bağımlılık dropdown
+  const depEl = document.getElementById('t-depends-on');
+  if (depEl) {
+    const others = (window.g_tasks || []).filter(t => t.id !== (id || ''));
+    depEl.innerHTML = '<option value="">— Bağımlılık yok —</option>' +
+      others.map(t => `<option value="${t.id}" ${task?.dependsOn === t.id ? 'selected' : ''}>${escHtml(t.title.slice(0,40))}</option>`).join('');
+  }
+
+  // Etiketler
+  _renderTaskTagChips(task ? (task.tags || []) : []);
+
+  // Alt görevler
+  _renderSubtasks(task ? (task.subtasks || []) : []);
+
   modal.classList.remove('hidden');
   document.getElementById('t-title').focus();
 };
@@ -4359,7 +5008,12 @@ window.saveTask_modal = function () {
     category:     document.getElementById('t-category').value || null,
     emailAlert,
     emailTo:      emailAlert ? document.getElementById('t-email-to').value.trim() : '',
-    kanbanStatus: document.getElementById('t-kanban-status')?.value || 'bekliyor'
+    kanbanStatus: document.getElementById('t-kanban-status')?.value || 'bekliyor',
+    assignee:     document.getElementById('t-assignee')?.value.trim() || '',
+    estimate:     document.getElementById('t-estimate')?.value || '',
+    dependsOn:    document.getElementById('t-depends-on')?.value || null,
+    tags:         _collectTaskTags(),
+    subtasks:     _collectSubtasks(_editingTaskId)
   };
 
   if (_editingTaskId) {
@@ -4434,47 +5088,311 @@ window.renderKanban = function () {
   const board = document.getElementById('kanban-board');
   if (!board) return;
 
-  const tasks = window.g_tasks || [];
+  // Swimlane select sync
+  const swSel = document.getElementById('kanban-swimlane-select');
+  if (swSel) swSel.value = window.kanbanSwimlane;
 
-  const colTasks = {
-    bekliyor:   tasks.filter(t => !t.done && (t.kanbanStatus === 'bekliyor'   || !t.kanbanStatus)),
+  const tasks = window.g_tasks || [];
+  const sl = window.kanbanSwimlane;
+
+  if (sl === 'none') {
+    board.innerHTML = _buildKanbanBoard(tasks);
+  } else {
+    // Swimlane grupları
+    let groups = [];
+    if (sl === 'assignee') {
+      const names = [...new Set(tasks.map(t => t.assignee || 'Atanmamış'))];
+      groups = names.map(n => ({ label: '👤 ' + n, tasks: tasks.filter(t => (t.assignee || 'Atanmamış') === n) }));
+    } else {
+      groups = [
+        { label: '🔴 Yüksek Öncelik', tasks: tasks.filter(t => t.priority === 'yuksek') },
+        { label: '🟠 Orta Öncelik',   tasks: tasks.filter(t => t.priority === 'orta') },
+        { label: '🟢 Düşük Öncelik',  tasks: tasks.filter(t => t.priority === 'dusuk') }
+      ].filter(g => g.tasks.length > 0);
+    }
+    board.innerHTML = groups.map(g => `
+      <div class="kanban-swimlane">
+        <div class="kanban-swimlane-label">${g.label} <span class="kanban-col-count">${g.tasks.length}</span></div>
+        <div class="kanban-swimlane-cols">${_buildKanbanBoard(g.tasks)}</div>
+      </div>
+    `).join('');
+  }
+
+  _initKanbanDragDrop();
+};
+
+function _buildKanbanBoard(tasks) {
+  const colBuckets = {
+    bekliyor:   tasks.filter(t => !t.done && (t.kanbanStatus === 'bekliyor' || !t.kanbanStatus)),
     devam:      tasks.filter(t => !t.done && t.kanbanStatus === 'devam'),
     tamamlandi: tasks.filter(t => t.done  || t.kanbanStatus === 'tamamlandi')
   };
-
-  board.innerHTML = KANBAN_COLS.map(col => {
-    const colTasks2 = colTasks[col.id] || [];
+  // Ensure kanbanOrder assigned, then sort
+  Object.values(colBuckets).forEach(bucket => {
+    bucket.forEach((t, i) => { if (t.kanbanOrder == null) t.kanbanOrder = i * 10; });
+    bucket.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
+  });
+  return KANBAN_COLS.map(col => {
+    const colTasks2 = colBuckets[col.id] || [];
     return `
       <div class="kanban-col">
         <div class="kanban-col-header">
-          <div class="kanban-col-title">
-            <span>${col.icon}</span>
-            <span>${col.label}</span>
-          </div>
+          <div class="kanban-col-title"><span>${col.icon}</span><span>${col.label}</span></div>
           <span class="kanban-col-count">${colTasks2.length}</span>
         </div>
-        <div class="kanban-cards">
+        <div class="kanban-cards" data-col="${col.id}">
           ${colTasks2.length === 0
-            ? '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px 0;">Görev yok</div>'
-            : colTasks2.map(t => buildKanbanCard(t, col.id)).join('')
-          }
+            ? '<div class="kanban-empty">Görev yok</div>'
+            : colTasks2.map(t => buildKanbanCard(t, col.id)).join('')}
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
+}
+
+// Sütun geçiş butonları: mevcut sütun dışındaki sütunlara geçiş butonları
+const _KANBAN_COL_MOVE = {
+  bekliyor:   [{ to: 'devam', label: 'Devam →' }, { to: 'tamamlandi', label: 'Tamam ✓' }],
+  devam:      [{ to: 'bekliyor', label: '← Bekle' }, { to: 'tamamlandi', label: 'Tamam ✓' }],
+  tamamlandi: [{ to: 'bekliyor', label: '← Bekle' }, { to: 'devam', label: 'Devam →' }]
 };
 
 function buildKanbanCard(task, colId) {
+  // Bağımlılık
+  const blocker   = task.dependsOn ? findTask(task.dependsOn) : null;
+  const isBlocked = blocker && !blocker.done;
+
+  // Subtask ilerleme
+  const subs    = task.subtasks || [];
+  const subDone = subs.filter(s => s.done).length;
+
+  // Etiketler
+  const tagsHtml = (task.tags || []).map(tag =>
+    `<span class="task-badge tag">${escHtml(tag)}</span>`
+  ).join('');
+
+  // Sütun geçiş butonları
+  const moveBtns = (_KANBAN_COL_MOVE[colId] || []).map(m =>
+    `<button class="kanban-move-btn" onclick="moveKanbanToCol('${task.id}','${m.to}',event)" title="${m.label}">${m.label}</button>`
+  ).join('');
+
   return `
-    <div class="kanban-task priority-${task.priority} ${task.done ? 'done' : ''}"
-         onclick="openTaskModal('${task.id}', event)">
-      <div class="kanban-task-title">${escHtml(task.title)}</div>
+    <div class="kanban-task priority-${task.priority} ${task.done ? 'done' : ''} ${isBlocked ? 'is-blocked' : ''}"
+         data-id="${task.id}" draggable="true">
+      <button class="kanban-delete-btn" onclick="deleteKanbanTask('${task.id}',event)" title="Sil">✕</button>
+      <button class="kanban-pomo-btn"   onclick="startPomodoro('${task.id}',event)"   title="Pomodoro Başlat">🍅</button>
+      <button class="kanban-order-btn up"   onclick="moveKanbanCard('${task.id}','up',event)"   title="Yukarı taşı">▲</button>
+      <button class="kanban-order-btn down" onclick="moveKanbanCard('${task.id}','down',event)" title="Aşağı taşı">▼</button>
+      <div class="kanban-task-title" onclick="openTaskModal('${task.id}',event)">${escHtml(task.title)}</div>
+      ${isBlocked ? `<div class="kanban-blocked-badge">🔒 Bekliyor: ${escHtml((blocker.title||'').slice(0,20))}</div>` : ''}
       <div class="kanban-task-meta">
         ${task.date ? `<span class="task-badge date">📅 ${window.formatDate(task.date)}</span>` : ''}
         <span class="task-badge badge-priority-${task.priority}">${PRIORITY_LABELS[task.priority]}</span>
+        ${tagsHtml}
       </div>
+      ${subs.length > 0 ? `
+      <div class="kanban-subtask-row">
+        <div class="subtask-progress"><div class="subtask-progress-bar" style="width:${Math.round(subDone/subs.length*100)}%"></div></div>
+        <span class="subtask-progress-label">${subDone}/${subs.length}</span>
+      </div>` : ''}
+      ${(task.assignee || task.estimate) ? `
+      <div class="kanban-work-row">
+        ${task.assignee ? `<span class="kanban-assignee">👤 ${escHtml(task.assignee)}</span>` : ''}
+        ${task.estimate ? `<span class="kanban-estimate">⏱ ${escHtml(task.estimate)}</span>` : ''}
+      </div>` : ''}
+      <div class="kanban-move-row">${moveBtns}</div>
     </div>
   `;
+}
+
+window.deleteKanbanTask = function (id, e) {
+  e.stopPropagation();
+  window.g_tasks = (window.g_tasks || []).filter(t => t.id !== id);
+  window.saveTask();
+  window.renderKanban();
+  window.updateStats();
+};
+
+window.moveKanbanToCol = function (id, newCol, e) {
+  if (e) e.stopPropagation();
+  const task = findTask(id);
+  if (!task) return;
+  task.kanbanStatus = newCol;
+  if (newCol === 'tamamlandi') { task.done = true;  task.doneAt = Date.now(); }
+  else                         { task.done = false; task.doneAt = null; }
+  window.saveTask();
+  window.renderKanban();
+  window.updateStats();
+};
+
+window.moveKanbanCard = function (id, dir, e) {
+  if (e) e.stopPropagation();
+  const tasks = window.g_tasks || [];
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  // Determine column bucket same as _buildKanbanBoard
+  let colTasks;
+  if (task.done || task.kanbanStatus === 'tamamlandi') {
+    colTasks = tasks.filter(t => t.done || t.kanbanStatus === 'tamamlandi');
+  } else if (task.kanbanStatus === 'devam') {
+    colTasks = tasks.filter(t => !t.done && t.kanbanStatus === 'devam');
+  } else {
+    colTasks = tasks.filter(t => !t.done && (t.kanbanStatus === 'bekliyor' || !t.kanbanStatus));
+  }
+
+  // Ensure order values set, then sort
+  colTasks.forEach((t, i) => { if (t.kanbanOrder == null) t.kanbanOrder = i * 10; });
+  colTasks.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
+
+  const idx = colTasks.findIndex(t => t.id === id);
+  if (dir === 'up' && idx > 0) {
+    const tmp = colTasks[idx].kanbanOrder;
+    colTasks[idx].kanbanOrder = colTasks[idx - 1].kanbanOrder;
+    colTasks[idx - 1].kanbanOrder = tmp;
+  } else if (dir === 'down' && idx < colTasks.length - 1) {
+    const tmp = colTasks[idx].kanbanOrder;
+    colTasks[idx].kanbanOrder = colTasks[idx + 1].kanbanOrder;
+    colTasks[idx + 1].kanbanOrder = tmp;
+  } else {
+    return; // already at edge
+  }
+
+  window.saveTask();
+  window.renderKanban();
+};
+
+// ── Kanban Sürükle-Bırak ──────────────────────────────────────
+let _dragTaskId = null;
+
+function _initKanbanDragDrop() {
+  document.querySelectorAll('.kanban-task[draggable]').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      _dragTaskId = card.dataset.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  });
+
+  document.querySelectorAll('.kanban-cards[data-col]').forEach(zone => {
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      zone.classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag-over');
+      if (!_dragTaskId) return;
+      const newCol = zone.dataset.col;
+      const task = findTask(_dragTaskId);
+      if (task && task.kanbanStatus !== newCol) {
+        task.kanbanStatus = newCol;
+        if (newCol === 'tamamlandi') { task.done = true; task.doneAt = Date.now(); }
+        else                         { task.done = false; task.doneAt = null; }
+        window.saveTask();
+        window.renderKanban();
+        window.updateStats();
+      }
+      _dragTaskId = null;
+    });
+  });
+}
+
+// ── Swimlane değiştirme ──────────────────────────────────────
+document.getElementById('kanban-swimlane-select')?.addEventListener('change', function () {
+  window.kanbanSwimlane = this.value;
+  window.renderKanban();
+});
+
+// ── Etiket (Tag) yardımcıları ────────────────────────────────
+let _taskTags = [];
+
+function _renderTaskTagChips(tags) {
+  _taskTags = [...tags];
+  const wrap = document.getElementById('task-tag-chips');
+  if (!wrap) return;
+  wrap.innerHTML = _taskTags.map((t, i) => `
+    <span class="tag-chip">${escHtml(t)}<button onclick="removeTaskTag(${i},event)">✕</button></span>
+  `).join('');
+}
+
+window.removeTaskTag = function (i, e) {
+  e.preventDefault();
+  _taskTags.splice(i, 1);
+  _renderTaskTagChips(_taskTags);
+};
+
+document.getElementById('task-tag-input')?.addEventListener('keydown', function (e) {
+  if ((e.key === 'Enter' || e.key === ',') && this.value.trim()) {
+    e.preventDefault();
+    const tag = this.value.trim().replace(/^#/, '');
+    if (tag && !_taskTags.includes('#' + tag)) _taskTags.push('#' + tag);
+    this.value = '';
+    _renderTaskTagChips(_taskTags);
+  }
+});
+
+function _collectTaskTags() { return [..._taskTags]; }
+
+// ── Nav etiket listesi ────────────────────────────────────────
+window.updateNavTags = function () {
+  const el = document.getElementById('nav-tags');
+  if (!el) return;
+  const tagMap = {};
+  (window.g_tasks || []).forEach(t => (t.tags || []).forEach(tag => {
+    tagMap[tag] = (tagMap[tag] || 0) + 1;
+  }));
+  const tags = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (tags.length === 0) { el.innerHTML = '<span style="color:var(--text3);font-size:11px;padding:4px 8px;">Henüz etiket yok</span>'; return; }
+  el.innerHTML = tags.map(([tag, count]) => `
+    <span class="nav-tag-chip" onclick="window.filterByTag('${escHtml(tag)}')">${escHtml(tag)} <span class="nav-count">${count}</span></span>
+  `).join('');
+};
+
+// ── Alt görev (Subtask) yardımcıları ─────────────────────────
+let _editSubtasks = [];
+
+function _renderSubtasks(subs) {
+  _editSubtasks = subs.map(s => ({ ...s }));
+  const list = document.getElementById('subtask-list');
+  if (!list) return;
+  list.innerHTML = _editSubtasks.map((s, i) => `
+    <div class="subtask-item">
+      <span class="subtask-check ${s.done ? 'done' : ''}" onclick="toggleEditSubtask(${i})">${s.done ? '✓' : ''}</span>
+      <span class="subtask-text ${s.done ? 'done' : ''}">${escHtml(s.text)}</span>
+      <button class="subtask-del" onclick="deleteEditSubtask(${i},event)">✕</button>
+    </div>
+  `).join('');
+}
+
+window.toggleEditSubtask = function (i) {
+  _editSubtasks[i].done = !_editSubtasks[i].done;
+  _renderSubtasks(_editSubtasks);
+};
+
+window.deleteEditSubtask = function (i, e) {
+  e.preventDefault();
+  _editSubtasks.splice(i, 1);
+  _renderSubtasks(_editSubtasks);
+};
+
+document.getElementById('btn-add-subtask')?.addEventListener('click', () => {
+  const inp = document.getElementById('subtask-input');
+  if (!inp || !inp.value.trim()) return;
+  _editSubtasks.push({ id: Date.now().toString(), text: inp.value.trim(), done: false });
+  inp.value = '';
+  _renderSubtasks(_editSubtasks);
+});
+
+document.getElementById('subtask-input')?.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-subtask')?.click(); }
+});
+
+function _collectSubtasks(editingId) {
+  // Merge with existing subtasks to preserve ids
+  return _editSubtasks.map(s => ({ id: s.id || Date.now().toString(), text: s.text, done: s.done }));
 }
 
 // ── Weekly ────────────────────────────────────────────────────
@@ -5374,7 +6292,7 @@ window.escHtml = escHtml;
   const HOUR_START = 7;   // 07:00
   const HOUR_END   = 22;  // 22:00
   const HOUR_COUNT = HOUR_END - HOUR_START;
-  const HOUR_PX    = 64;  // px per hour
+  const HOUR_PX    = 80;  // px per hour (30-dk = 40px)
 
   const TYPE_META = {
     odak:     { label: '🎯 Odak',     color: 'var(--blue)' },
@@ -5388,6 +6306,9 @@ window.escHtml = escHtml;
   let scheduleTab  = 'day';   // 'day' | 'week'
   let scheduleDate = new Date();
   scheduleDate.setHours(0,0,0,0);
+
+  // Drag state
+  let drag = null;
 
   // ── Entry point ────────────────────────────────────────────
   window.renderSchedule = function () {
@@ -5441,21 +6362,60 @@ window.escHtml = escHtml;
     return (min / 60) * HOUR_PX;
   }
 
+  function minToStr(min) {
+    return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  }
+
+  // ── Tekrar eden blokları genişlet ─────────────────────────────
+  function expandScheduleBlocks(key) {
+    const direct = (window.g_schedule[key] || []).slice();
+    const extras = [];
+
+    // Diğer günlerdeki tekrarlayan bloklara bak
+    Object.entries(window.g_schedule).forEach(([srcKey, blocks]) => {
+      if (srcKey === key) return;
+      (blocks || []).forEach(b => {
+        if (!b.repeat || b.repeat === 'none') return;
+        const srcDate = new Date(srcKey + 'T00:00:00');
+        const tgtDate = new Date(key + 'T00:00:00');
+        const diffDays = Math.round((tgtDate - srcDate) / 86400000);
+        if (diffDays <= 0) return;
+
+        let match = false;
+        if (b.repeat === 'daily') match = true;
+        if (b.repeat === 'weekly' && diffDays % 7 === 0) match = true;
+        if (b.repeat === 'weekdays') {
+          const dow = tgtDate.getDay();
+          match = dow >= 1 && dow <= 5;
+        }
+        if (match && !direct.find(d => d._srcId === b.id)) {
+          extras.push({ ...b, id: b.id + '_r' + key, _srcId: b.id, _isRepeat: true });
+        }
+      });
+    });
+
+    return [...direct, ...extras].sort((a, b) => a.start.localeCompare(b.start));
+  }
+
   // ── Daily view ─────────────────────────────────────────────
   function renderDayView() {
     const body = document.getElementById('schedule-body');
     if (!body) return;
 
     const key    = ds(scheduleDate);
-    const blocks = (window.g_schedule[key] || []).slice().sort((a,b) => a.start.localeCompare(b.start));
+    const blocks = expandScheduleBlocks(key);
     const todayMark = ds(new Date()) === key;
 
+    // Hour lines + half-hour lines
     let hoursHtml = '';
     for (let h = HOUR_START; h < HOUR_END; h++) {
       const top = (h - HOUR_START) * HOUR_PX;
       hoursHtml += `
         <div class="sch-hour-line" style="top:${top}px">
           <span class="sch-hour-label">${String(h).padStart(2,'0')}:00</span>
+        </div>
+        <div class="sch-half-line" style="top:${top + HOUR_PX / 2}px">
+          <span class="sch-half-label">${String(h).padStart(2,'0')}:30</span>
         </div>`;
     }
 
@@ -5486,24 +6446,120 @@ window.escHtml = escHtml;
           ${blocksHtml}
         </div>
       </div>`;
+
+    // Attach drag + click listeners to blocks
+    body.querySelectorAll('.sch-block').forEach(el => {
+      attachBlockDrag(el, key);
+    });
   }
 
   function buildBlockEl(b, key) {
     const startMin = timeToMin(b.start);
     const endMin   = timeToMin(b.end);
     const top      = minToTop(startMin);
-    const height   = Math.max(minToPx(endMin - startMin), 24);
+    const height   = Math.max(minToPx(endMin - startMin), 28);
     const meta     = TYPE_META[b.type] || TYPE_META.serbest;
     const task     = b.taskId ? (window.g_tasks || []).find(t => t.id === b.taskId) : null;
+    const isDone   = !!b.done;
 
     return `
-      <div class="sch-block" data-id="${b.id}" data-key="${key}"
-           style="top:${top}px;height:${height}px;border-left-color:${meta.color}"
-           onclick="openBlockModal('${key}','${b.id}')">
+      <div class="sch-block ${isDone ? 'done' : ''}" data-id="${b.id}" data-key="${key}"
+           style="top:${top}px;height:${height}px;border-left-color:${meta.color}">
+        <button class="sch-block-done-btn ${isDone ? 'checked' : ''}"
+                onclick="toggleBlockDone('${key}','${b.id}',event)"
+                title="${isDone ? 'Tamamlandı — geri al' : 'Tamamlandı olarak işaretle'}">
+          ${isDone ? '✓' : ''}
+        </button>
         <div class="sch-block-time">${b.start}–${b.end}</div>
         <div class="sch-block-title">${escHtml(b.title)}</div>
         ${task ? `<div class="sch-block-task">↳ ${escHtml(task.title)}</div>` : ''}
       </div>`;
+  }
+
+  window.toggleBlockDone = function (key, blockId, e) {
+    if (e) e.stopPropagation();
+    const blocks = window.g_schedule[key];
+    if (!blocks) return;
+    const b = blocks.find(x => x.id === blockId);
+    if (!b) return;
+    b.done = !b.done;
+    window.saveSchedule();
+    window.renderSchedule();
+  };
+
+  // ── Drag to reschedule ─────────────────────────────────────
+  function attachBlockDrag(el, key) {
+    el.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const blockId  = el.dataset.id;
+      const b        = (window.g_schedule[key] || []).find(x => x.id === blockId);
+      if (!b) return;
+
+      const startMin  = timeToMin(b.start);
+      const endMin    = timeToMin(b.end);
+      const duration  = endMin - startMin;
+
+      drag = {
+        el, key, b,
+        startMin, duration,
+        origY:    e.clientY,
+        moved:    false,
+        currentStartMin: startMin
+      };
+
+      document.addEventListener('mousemove', onDragMove);
+      document.addEventListener('mouseup',   onDragUp);
+    });
+  }
+
+  function onDragMove(e) {
+    if (!drag) return;
+    const dy = e.clientY - drag.origY;
+    if (Math.abs(dy) > 5) drag.moved = true;
+    if (!drag.moved) return;
+
+    drag.el.classList.add('dragging');
+
+    // Snap to 30-minute steps
+    const deltaMin = Math.round((dy / HOUR_PX) * 60 / 30) * 30;
+    let newStart = drag.startMin + deltaMin;
+    newStart = Math.max(HOUR_START * 60, Math.min(HOUR_END * 60 - drag.duration, newStart));
+    drag.currentStartMin = newStart;
+
+    drag.el.style.top = minToTop(newStart) + 'px';
+
+    // Live-update time label
+    const timeEl = drag.el.querySelector('.sch-block-time');
+    if (timeEl) timeEl.textContent = `${minToStr(newStart)}–${minToStr(newStart + drag.duration)}`;
+  }
+
+  function onDragUp() {
+    if (!drag) return;
+    document.removeEventListener('mousemove', onDragMove);
+    document.removeEventListener('mouseup',   onDragUp);
+
+    const { el, key, b, moved, currentStartMin, duration } = drag;
+    drag = null;
+
+    el.classList.remove('dragging');
+
+    if (moved && currentStartMin !== undefined) {
+      const newStart = minToStr(currentStartMin);
+      const newEnd   = minToStr(currentStartMin + duration);
+      const blocks   = window.g_schedule[key] || [];
+      const idx      = blocks.findIndex(x => x.id === b.id);
+      if (idx > -1) {
+        blocks[idx] = { ...blocks[idx], start: newStart, end: newEnd };
+        window.saveSchedule();
+        window.renderSchedule();
+      }
+    } else if (!moved) {
+      // Treat as click → open edit modal
+      openBlockModal(key, b.id);
+    }
   }
 
   function buildClickZones(blocks, key) {
@@ -5517,7 +6573,7 @@ window.escHtml = escHtml;
       if (o.s > cursor) {
         const top = minToTop(cursor);
         const h   = minToPx(o.s - cursor);
-        const defaultStart = `${String(Math.floor(cursor/60)).padStart(2,'0')}:${String(cursor%60).padStart(2,'0')}`;
+        const defaultStart = minToStr(cursor);
         zones += `<div class="sch-empty-zone" style="top:${top}px;height:${h}px"
                        onclick="openBlockModal('${key}',null,'${defaultStart}')"></div>`;
       }
@@ -5527,7 +6583,7 @@ window.escHtml = escHtml;
     if (cursor < end) {
       const top = minToTop(cursor);
       const h   = minToPx(end - cursor);
-      const defaultStart = `${String(Math.floor(cursor/60)).padStart(2,'0')}:${String(cursor%60).padStart(2,'0')}`;
+      const defaultStart = minToStr(cursor);
       zones += `<div class="sch-empty-zone" style="top:${top}px;height:${h}px"
                      onclick="openBlockModal('${key}',null,'${defaultStart}')"></div>`;
     }
@@ -5555,12 +6611,14 @@ window.escHtml = escHtml;
       const d    = addDays(mon, i);
       const key  = ds(d);
       const isToday = key === todayS;
-      const blocks  = (window.g_schedule[key] || []).slice().sort((a,b) => a.start.localeCompare(b.start));
+      const blocks  = expandScheduleBlocks(key);
 
-      // Hour grid lines
+      // Hour grid lines + half-hour lines
       let lines = '';
       for (let h = HOUR_START; h < HOUR_END; h++) {
-        lines += `<div class="sch-week-grid-line" style="top:${(h-HOUR_START)*HOUR_PX}px"></div>`;
+        const top = (h - HOUR_START) * HOUR_PX;
+        lines += `<div class="sch-week-grid-line" style="top:${top}px"></div>`;
+        lines += `<div class="sch-week-half-line" style="top:${top + HOUR_PX / 2}px"></div>`;
       }
 
       const blocksHtml = blocks.map(b => {
@@ -5628,6 +6686,9 @@ window.escHtml = escHtml;
     document.getElementById('block-end').value   = existing ? existing.end   : addOneHour(defaultStart || '09:00');
     taskSel.value = existing?.taskId || '';
 
+    const repeatSel = document.getElementById('block-repeat');
+    if (repeatSel) repeatSel.value = existing?.repeat || 'none';
+
     // Type buttons
     const activeType = existing?.type || 'odak';
     document.querySelectorAll('.block-type-btn').forEach(b => {
@@ -5656,6 +6717,7 @@ window.escHtml = escHtml;
     const end    = document.getElementById('block-end').value;
     const type   = document.querySelector('.block-type-btn.active')?.dataset.type || 'odak';
     const taskId = document.getElementById('block-task').value || null;
+    const repeat = document.getElementById('block-repeat')?.value || 'none';
 
     if (start >= end) {
       showNotif('⚠️', 'Geçersiz saat', 'Bitiş saati başlangıçtan sonra olmalı.');
@@ -5666,9 +6728,9 @@ window.escHtml = escHtml;
 
     if (blockId) {
       const idx = window.g_schedule[key].findIndex(b => b.id === blockId);
-      if (idx > -1) window.g_schedule[key][idx] = { id: blockId, title, start, end, type, taskId };
+      if (idx > -1) window.g_schedule[key][idx] = { id: blockId, title, start, end, type, taskId, repeat };
     } else {
-      window.g_schedule[key].push({ id: Date.now().toString(), title, start, end, type, taskId });
+      window.g_schedule[key].push({ id: Date.now().toString(), title, start, end, type, taskId, repeat });
     }
 
     window.saveSchedule();
@@ -5695,7 +6757,7 @@ window.escHtml = escHtml;
   });
 
   document.getElementById('btn-add-block')?.addEventListener('click', () => {
-    const key = scheduleTab === 'day' ? ds(scheduleDate) : ds(scheduleDate);
+    const key = ds(scheduleDate);
     openBlockModal(key, null);
   });
 
@@ -5722,6 +6784,323 @@ window.escHtml = escHtml;
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+})();
+
+  </script>
+  <script>
+/* === stats.js === */
+/* ============================================================
+   stats.js — Statistics & productivity dashboard
+   ============================================================ */
+
+(function () {
+  window.renderStats = function () {
+    const el = document.getElementById('stats-dashboard');
+    if (!el) return;
+
+    const tasks  = window.g_tasks || [];
+    const today  = new Date();
+    const todayS = window.todayStr();
+
+    // ── KPI ────────────────────────────────────────────────────
+    const total    = tasks.length;
+    const done     = tasks.filter(t => t.done).length;
+    const pending  = tasks.filter(t => !t.done).length;
+    const urgent   = tasks.filter(t => t.priority === 'yuksek' && !t.done).length;
+    const rate     = total > 0 ? Math.round(done / total * 100) : 0;
+    const streak   = window.updateStreak ? window.updateStreak() : 0;
+
+    // ── Son 7 gün bar chart ────────────────────────────────────
+    const last7 = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds        = d.toISOString().slice(0, 10);
+      const dayTasks  = tasks.filter(t => t.date === ds);
+      const dayDone   = dayTasks.filter(t => t.done).length;
+      last7.push({ ds, total: dayTasks.length, done: dayDone, label: DAYS[d.getDay()] });
+    }
+    const maxBar = Math.max(...last7.map(d => d.total), 1);
+
+    // ── Kategori dağılımı ──────────────────────────────────────
+    const catMap = {};
+    tasks.forEach(t => {
+      const c = t.category || 'Diğer';
+      catMap[c] = (catMap[c] || 0) + 1;
+    });
+    const cats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+
+    // ── Sorumlu iş yükü ───────────────────────────────────────
+    const assigneeMap = {};
+    tasks.filter(t => !t.done && t.assignee).forEach(t => {
+      assigneeMap[t.assignee] = (assigneeMap[t.assignee] || 0) + 1;
+    });
+    const assignees = Object.entries(assigneeMap).sort((a, b) => b[1] - a[1]);
+
+    // ── Etiket dağılımı ───────────────────────────────────────
+    const tagMap = {};
+    tasks.forEach(t => (t.tags || []).forEach(tag => {
+      tagMap[tag] = (tagMap[tag] || 0) + 1;
+    }));
+    const topTags = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+    // ── Kanban dağılımı ───────────────────────────────────────
+    const kbMap = { bekliyor: 0, devam: 0, tamamlandi: 0 };
+    tasks.forEach(t => {
+      const s = t.done ? 'tamamlandi' : (t.kanbanStatus || 'bekliyor');
+      kbMap[s] = (kbMap[s] || 0) + 1;
+    });
+
+    el.innerHTML = `
+      <!-- KPI Kartları -->
+      <div class="stats-kpi-grid">
+        <div class="stats-kpi-card">
+          <div class="stats-kpi-val">${total}</div>
+          <div class="stats-kpi-lbl">Toplam Görev</div>
+        </div>
+        <div class="stats-kpi-card green">
+          <div class="stats-kpi-val">${done}</div>
+          <div class="stats-kpi-lbl">Tamamlandı</div>
+        </div>
+        <div class="stats-kpi-card gold">
+          <div class="stats-kpi-val">${pending}</div>
+          <div class="stats-kpi-lbl">Bekliyor</div>
+        </div>
+        <div class="stats-kpi-card red">
+          <div class="stats-kpi-val">${urgent}</div>
+          <div class="stats-kpi-lbl">Acil</div>
+        </div>
+        <div class="stats-kpi-card purple">
+          <div class="stats-kpi-val">%${rate}</div>
+          <div class="stats-kpi-lbl">Tamamlanma</div>
+        </div>
+        <div class="stats-kpi-card fire">
+          <div class="stats-kpi-val">${streak}</div>
+          <div class="stats-kpi-lbl">🔥 Gün Serisi</div>
+        </div>
+      </div>
+
+      <!-- Son 7 Gün -->
+      <div class="stats-section">
+        <div class="stats-section-title">Son 7 Gün</div>
+        <div class="stats-bar-chart">
+          ${last7.map(d => `
+            <div class="stats-bar-col">
+              <div class="stats-bar-wrap">
+                <div class="stats-bar-bg" style="height:${Math.round(d.total / maxBar * 100)}%"></div>
+                <div class="stats-bar-fill" style="height:${d.total > 0 ? Math.round(d.done / maxBar * 100) : 0}%"></div>
+              </div>
+              <div class="stats-bar-label ${d.ds === todayS ? 'today' : ''}">${d.label}</div>
+              <div class="stats-bar-count">${d.done}/${d.total}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Kanban Durum -->
+      <div class="stats-section">
+        <div class="stats-section-title">Kanban Durumu</div>
+        <div class="stats-kanban-row">
+          <div class="stats-kb-col gold">
+            <div class="stats-kb-val">${kbMap.bekliyor}</div>
+            <div class="stats-kb-lbl">Bekliyor</div>
+          </div>
+          <div class="stats-kb-col blue">
+            <div class="stats-kb-val">${kbMap.devam}</div>
+            <div class="stats-kb-lbl">Devam Ediyor</div>
+          </div>
+          <div class="stats-kb-col green">
+            <div class="stats-kb-val">${kbMap.tamamlandi}</div>
+            <div class="stats-kb-lbl">Tamamlandı</div>
+          </div>
+        </div>
+      </div>
+
+      ${cats.length > 0 ? `
+      <!-- Kategori Dağılımı -->
+      <div class="stats-section">
+        <div class="stats-section-title">Kategori Dağılımı</div>
+        ${cats.map(([cat, count]) => `
+          <div class="stats-cat-row">
+            <span class="stats-cat-label">${escHtml(cat)}</span>
+            <div class="stats-cat-bar-wrap">
+              <div class="stats-cat-bar" style="width:${Math.round(count / total * 100)}%"></div>
+            </div>
+            <span class="stats-cat-count">${count}</span>
+          </div>
+        `).join('')}
+      </div>` : ''}
+
+      ${assignees.length > 0 ? `
+      <!-- Sorumlu İş Yükü -->
+      <div class="stats-section">
+        <div class="stats-section-title">👤 Sorumlu İş Yükü</div>
+        ${assignees.map(([name, count]) => `
+          <div class="stats-cat-row">
+            <span class="stats-cat-label">${escHtml(name)}</span>
+            <div class="stats-cat-bar-wrap">
+              <div class="stats-cat-bar assignee" style="width:${Math.round(count / (pending || 1) * 100)}%"></div>
+            </div>
+            <span class="stats-cat-count">${count} görev</span>
+          </div>
+        `).join('')}
+      </div>` : ''}
+
+      ${topTags.length > 0 ? `
+      <!-- Popüler Etiketler -->
+      <div class="stats-section">
+        <div class="stats-section-title">🏷 Popüler Etiketler</div>
+        <div class="stats-tags-wrap">
+          ${topTags.map(([tag, count]) => `
+            <span class="stats-tag-chip">${escHtml(tag)} <span class="stats-tag-count">${count}</span></span>
+          `).join('')}
+        </div>
+      </div>` : ''}
+    `;
+  };
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+
+  </script>
+  <script>
+/* === pomodoro.js === */
+/* ============================================================
+   pomodoro.js — Pomodoro zamanlayıcısı (25/5 dk)
+   ============================================================ */
+
+(function () {
+  const WORK_SEC  = 25 * 60;
+  const BREAK_SEC = 5 * 60;
+
+  let state = {
+    mode:     'work',  // 'work' | 'break'
+    seconds:  WORK_SEC,
+    running:  false,
+    taskId:   null,
+    sessions: 0
+  };
+
+  let _interval = null;
+
+  // ── Başlat (kanban kartından çağrılır) ───────────────────────
+  window.startPomodoro = function (taskId, e) {
+    if (e) e.stopPropagation();
+    const task = (window.g_tasks || []).find(t => t.id === taskId);
+    if (!task) return;
+
+    clearInterval(_interval);
+    _interval = null;
+    state = { mode: 'work', seconds: WORK_SEC, running: false, taskId, sessions: 0 };
+
+    const widget = document.getElementById('pomodoro-widget');
+    if (widget) widget.classList.remove('hidden');
+    _render(task.title);
+    showNotif('🍅', 'Pomodoro Hazır', `"${task.title}" için zamanlayıcı başlatıldı.`);
+  };
+
+  // ── Render ───────────────────────────────────────────────────
+  function _render(taskName) {
+    const m = Math.floor(state.seconds / 60);
+    const s = state.seconds % 60;
+
+    const get = id => document.getElementById(id);
+    const timerEl  = get('pomo-timer');
+    const modeEl   = get('pomo-mode');
+    const taskEl   = get('pomo-task');
+    const sessEl   = get('pomo-sessions');
+    const toggleEl = get('pomo-toggle');
+
+    if (!timerEl) return;
+    timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if (modeEl) {
+      modeEl.textContent  = state.mode === 'work' ? '🎯 Odak' : '☕ Mola';
+      modeEl.dataset.mode = state.mode;
+    }
+    if (taskEl && taskName !== undefined) taskEl.textContent = taskName || '';
+    if (sessEl) {
+      sessEl.innerHTML = state.sessions > 0
+        ? '🍅'.repeat(Math.min(state.sessions, 8))
+        : '<span style="color:var(--text3);font-size:11px;">Henüz oturum yok</span>';
+    }
+    if (toggleEl) toggleEl.textContent = state.running ? '⏸' : '▶';
+
+    // Renk güncelle
+    const widget = document.getElementById('pomodoro-widget');
+    if (widget) widget.dataset.mode = state.mode;
+  }
+
+  // ── Tick ─────────────────────────────────────────────────────
+  function _tick() {
+    if (state.seconds > 0) {
+      state.seconds--;
+      _render();
+      return;
+    }
+
+    clearInterval(_interval);
+    _interval = null;
+    state.running = false;
+
+    if (state.mode === 'work') {
+      state.sessions++;
+      state.mode    = 'break';
+      state.seconds = BREAK_SEC;
+      _notify('🍅 Pomodoro Tamamlandı!', 'Harika iş! 5 dakika mola zamanı.', 'break');
+    } else {
+      state.mode    = 'work';
+      state.seconds = WORK_SEC;
+      _notify('☕ Mola Bitti!', 'Tekrar odaklanma zamanı!', 'work');
+    }
+    _render();
+  }
+
+  function _notify(title, body, mode) {
+    showNotif(mode === 'work' ? '🎯' : '🍅', title, body);
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body });
+    }
+  }
+
+  // ── Buton bağlamaları ─────────────────────────────────────────
+  document.getElementById('pomo-toggle')?.addEventListener('click', () => {
+    if (state.running) {
+      clearInterval(_interval);
+      _interval     = null;
+      state.running = false;
+    } else {
+      state.running = true;
+      _interval     = setInterval(_tick, 1000);
+    }
+    _render();
+  });
+
+  document.getElementById('pomo-reset')?.addEventListener('click', () => {
+    clearInterval(_interval);
+    _interval     = null;
+    state.running = false;
+    state.seconds = state.mode === 'work' ? WORK_SEC : BREAK_SEC;
+    _render();
+  });
+
+  document.getElementById('pomo-skip')?.addEventListener('click', () => {
+    clearInterval(_interval);
+    _interval     = null;
+    state.running = false;
+    if (state.mode === 'work') { state.sessions++; state.mode = 'break'; state.seconds = BREAK_SEC; }
+    else                       { state.mode = 'work'; state.seconds = WORK_SEC; }
+    _render();
+  });
+
+  document.getElementById('pomo-close')?.addEventListener('click', () => {
+    clearInterval(_interval);
+    _interval     = null;
+    state.running = false;
+    document.getElementById('pomodoro-widget')?.classList.add('hidden');
+  });
 })();
 
   </script>
