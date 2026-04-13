@@ -2153,6 +2153,25 @@ img { display: block; max-width: 100%; }
   transition: width 0.3s;
 }
 .subtask-progress-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* ── Linked schedule blocks on task cards ── */
+.task-sch-chips {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  margin-top: 6px; font-size: 10px; color: var(--text3);
+}
+.task-sch-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 4px;
+  background: var(--s2); border: 1px solid var(--border);
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  user-select: none; white-space: nowrap;
+}
+.task-sch-chip:hover { background: var(--s3); border-color: var(--border2); }
+.task-sch-chip.done { opacity: 0.5; }
+.task-sch-chip.done .task-sch-chip-title { text-decoration: line-through; }
+.task-sch-chip-time { color: var(--text3); }
+.task-sch-chip-title { color: var(--text2); font-weight: 500; }
+
 .kanban-subtask-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .kanban-subtask-row .subtask-progress { flex: 1; margin-top: 0; }
 .kanban-pomo-btn {
@@ -4814,6 +4833,37 @@ function sortTasks(tasks, mode) {
   }
 }
 
+// ── Get schedule blocks linked to a task ─────────────────────
+function getLinkedBlocks(taskId) {
+  const result = [];
+  const sched = window.g_schedule || {};
+  Object.entries(sched).forEach(([date, blocks]) => {
+    (blocks || []).forEach(b => {
+      if (b.taskId === taskId) result.push({ ...b, _date: date });
+    });
+  });
+  result.sort((a, b) => a._date.localeCompare(b._date) || a.start.localeCompare(b.start));
+  return result;
+}
+
+// ── Build linked schedule blocks HTML ────────────────────────
+function buildLinkedBlocksHtml(taskId) {
+  const blocks = getLinkedBlocks(taskId);
+  if (!blocks.length) return '';
+  const TYPE_ICON = { odak: '🎯', toplanti: '🤝', review: '👁', mola: '☕', serbest: '📌' };
+  const chips = blocks.map(b => {
+    const icon = TYPE_ICON[b.type] || '📌';
+    const label = `${b._date} ${b.start}–${b.end}`;
+    return `<span class="task-sch-chip ${b.done ? 'done' : ''}"
+                  onclick="event.stopPropagation();openBlockModal('${b._date}','${b.id}')"
+                  title="${escHtml(b.title)}">
+      ${icon} <span class="task-sch-chip-time">${label}</span>
+      <span class="task-sch-chip-title">${escHtml(b.title)}</span>
+    </span>`;
+  }).join('');
+  return `<div class="task-sch-chips">🗓 ${chips}</div>`;
+}
+
 // ── Build task card HTML ──────────────────────────────────────
 function buildTaskCard(task) {
   const realId = task.id.replace(/_r\d{4}-\d{2}-\d{2}$/, '');
@@ -4858,6 +4908,7 @@ function buildTaskCard(task) {
         ${task.desc ? `<div class="task-desc">${escHtml(task.desc)}</div>` : ''}
         <div class="task-meta">${meta}${tagsHtml}</div>
         ${subProgressHtml}
+        ${buildLinkedBlocksHtml(task.id)}
       </div>
       <div class="task-actions">
         <button title="Düzenle" onclick="openTaskModal('${realId}', event)">✏️</button>
