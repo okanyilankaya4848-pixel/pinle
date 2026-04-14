@@ -4846,9 +4846,31 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
     const tasks = window.g_tasks || [];
     tasks.forEach(task => {
       if (task.done || !task.date || !task.emailAlert) return;
+      const toEmail = task.emailTo || (window.g_emailCfg ? window.g_emailCfg.toEmail : '') ||
+                      (window.g_user ? window.g_user.email : '');
       const taskDate = new Date(task.date + 'T' + (task.time || '09:00') + ':00');
+      const taskMin  = taskDate.getHours() * 60 + taskDate.getMinutes();
 
-      // 1 hour before
+      // Tam görev saatinde (±1 dk)
+      const exactKey = `exact:${task.id}:${todayS}`;
+      if (
+        now.toDateString() === taskDate.toDateString() &&
+        Math.abs(nowMin - taskMin) <= 1 &&
+        !_notifiedToday.has(exactKey)
+      ) {
+        _notifiedToday.add(exactKey);
+        showNotif('⏰', 'Görev zamanı!', `"${task.title}" için belirlenmiş saat geldi.`, 6000);
+        notifyBrowser('⏰ Görev zamanı!', `"${task.title}"`);
+        if (toEmail) {
+          window.sendEmail({
+            to: toEmail,
+            subject: `⏰ Pinle — Şimdi: ${task.title}`,
+            message: `Görev zamanı geldi!\n\nGörev: ${task.title}\nTarih: ${task.date}\nSaat: ${task.time || '09:00'}${task.desc ? '\nNot: ' + task.desc : ''}`
+          });
+        }
+      }
+
+      // 1 saat önce (±1 dk)
       const oneHourBefore = new Date(taskDate.getTime() - 3600000);
       const ohKey = `1h:${task.id}:${todayS}`;
       if (
@@ -4859,9 +4881,16 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
         _notifiedToday.add(ohKey);
         showNotif('⏰', '1 saat kaldı', `"${task.title}" görevine 1 saat kaldı.`, 5000);
         notifyBrowser('⏰ 1 saat kaldı', `"${task.title}" görevine 1 saat kaldı.`);
+        if (toEmail) {
+          window.sendEmail({
+            to: toEmail,
+            subject: `⏰ Pinle — 1 saat kaldı: ${task.title}`,
+            message: `Görevinize 1 saat kaldı!\n\nGörev: ${task.title}\nTarih: ${task.date}\nSaat: ${task.time || '09:00'}${task.desc ? '\nNot: ' + task.desc : ''}`
+          });
+        }
       }
 
-      // 1 day before at 08:00
+      // 1 gün önce sabah 08:00 (±1 dk)
       const dayBeforeDate = new Date(task.date);
       dayBeforeDate.setDate(dayBeforeDate.getDate() - 1);
       const dbKey = `1d:${task.id}:${todayS}`;
@@ -4873,6 +4902,13 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
         _notifiedToday.add(dbKey);
         showNotif('📅', 'Yarın!', `"${task.title}" görevi yarın.`, 5000);
         notifyBrowser('📅 Yarınki hatırlatma', `"${task.title}" görevi yarın.`);
+        if (toEmail) {
+          window.sendEmail({
+            to: toEmail,
+            subject: `📅 Pinle — Yarın: ${task.title}`,
+            message: `Yarınki göreviniz için hatırlatma!\n\nGörev: ${task.title}\nTarih: ${task.date}\nSaat: ${task.time || '09:00'}${task.desc ? '\nNot: ' + task.desc : ''}`
+          });
+        }
       }
     });
   }
@@ -4881,12 +4917,23 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
     const todayS = window.todayStr();
     const todayTasks = (window.g_tasks || []).filter(t => t.date === todayS && !t.done);
     const count = todayTasks.length;
+    const toEmail = window.g_emailCfg ? window.g_emailCfg.toEmail : '';
     const msg = count > 0
       ? `Bugün ${count} göreviniz var: ${todayTasks.slice(0, 3).map(t => t.title).join(', ')}`
       : 'Bugün tamamlanmış göreviniz yok. Harika iş!';
 
     showNotif('📋', 'Günlük özet', msg, 6000);
     notifyBrowser('📋 Pinle — Günlük Özet', msg);
+    if (toEmail) {
+      const lines = count > 0
+        ? todayTasks.map((t, i) => `${i + 1}. ${t.title}${t.time ? ' (' + t.time + ')' : ''}`).join('\n')
+        : 'Bugün tamamlanmamış görev yok.';
+      window.sendEmail({
+        to: toEmail,
+        subject: `📋 Pinle — Günlük Özet`,
+        message: `Bugün ${count} göreviniz var:\n\n${lines}`
+      });
+    }
   }
 
   function notifyBrowser(title, body) {
@@ -6220,7 +6267,7 @@ window.escHtml = escHtml;
   }
 
   // ── Open note ─────────────────────────────────────────────
-  function openNote(id) {
+  window.openNote = function openNote(id) {
     window.curNote = id;
     const note = findNote(id);
     if (!note) return;
@@ -6490,13 +6537,6 @@ window.escHtml = escHtml;
    ============================================================ */
 
 (function () {
-  // ── Render tracker view ────────────────────────────────────
-  window.renderTracker = function () {
-    updateTrackerHeader();
-    renderTrackerTable();
-    renderTrackerProgress();
-  };
-
   function updateTrackerHeader() {
     const el = document.getElementById('tracker-month-label');
     if (el) el.textContent = `${MONTHS[window.trackerMonth]} ${window.trackerYear}`;
