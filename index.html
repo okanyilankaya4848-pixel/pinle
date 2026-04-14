@@ -2262,6 +2262,30 @@ img { display: block; max-width: 100%; }
 .pomo-main-btn { width: 44px !important; height: 44px !important; font-size: 16px !important; background: var(--gold) !important; color: var(--bg) !important; border-color: var(--gold) !important; }
 .pomo-main-btn:hover { filter: brightness(1.1); }
 .pomo-sessions { font-size: 14px; min-height: 18px; }
+.pomo-header-btns { display: flex; align-items: center; gap: 4px; }
+.pomo-settings-btn {
+  background: none; border: none; color: var(--text3); font-size: 12px;
+  cursor: pointer; padding: 2px 4px; border-radius: 4px;
+}
+.pomo-settings-btn:hover { color: var(--text); background: var(--s3); }
+.pomo-settings-panel {
+  background: var(--s3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; margin-top: 10px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pomo-settings-panel.hidden { display: none; }
+.pomo-set-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.pomo-set-label { font-size: 11px; color: var(--text2); flex: 1; text-align: left; }
+.pomo-set-input-wrap { display: flex; align-items: center; gap: 4px; }
+.pomo-set-input {
+  width: 48px; background: var(--s2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 6px; padding: 3px 6px;
+  font-size: 13px; text-align: center;
+}
+.pomo-set-input:focus { outline: none; border-color: var(--gold); }
+.pomo-set-unit { font-size: 11px; color: var(--text3); }
 
 /* ── Hızlı Yakalama ───────────────────────────────────────── */
 .quick-capture-fab {
@@ -2376,6 +2400,198 @@ img { display: block; max-width: 100%; }
   display: flex; align-items: center; gap: 8px;
 }
 .kanban-swimlane-cols { display: flex; gap: 16px; }
+
+/* ── Görev drag state ──────────────────────────────────────── */
+.task-card[draggable="true"] { cursor: grab; }
+.task-card[draggable="true"]:active { cursor: grabbing; }
+.mini-cal-cell.drag-over {
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
+  outline: 1px dashed var(--gold); outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Bildirim Merkezi ──────────────────────────────────────── */
+.notif-bell-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.notif-bell-btn {
+  background: none; border: none; font-size: 18px; cursor: pointer;
+  padding: 4px 6px; border-radius: var(--radius-sm);
+  opacity: 0.7; transition: opacity 0.15s, background 0.15s;
+  line-height: 1;
+}
+.notif-bell-btn:hover { opacity: 1; background: var(--s2); }
+.notif-bell-badge {
+  position: absolute; top: 0; right: 0;
+  background: var(--red); color: #fff;
+  font-size: 9px; font-weight: 700; min-width: 16px; height: 16px;
+  border-radius: 99px; display: flex; align-items: center; justify-content: center;
+  padding: 0 3px; pointer-events: none;
+}
+.notif-bell-badge.hidden { display: none; }
+.notif-center {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  width: 300px; max-height: 380px;
+  background: var(--s1); border: 1px solid var(--border2);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  z-index: 900; display: flex; flex-direction: column; overflow: hidden;
+}
+.notif-center.hidden { display: none; }
+.notif-center-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.notif-center-hdr-title { font-size: 13px; font-weight: 600; color: var(--text2); }
+#notif-center-list { overflow-y: auto; flex: 1; }
+.notif-center-empty {
+  padding: 24px; text-align: center; font-size: 12px; color: var(--text3);
+}
+.notif-center-item {
+  display: flex; gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.notif-center-item:hover { background: var(--s2); }
+.notif-center-icon { font-size: 18px; flex-shrink: 0; line-height: 1.4; }
+.notif-center-body { flex: 1; min-width: 0; }
+.notif-center-title { font-size: 12px; font-weight: 600; color: var(--text); }
+.notif-center-text { font-size: 11px; color: var(--text3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notif-center-time { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+/* ── Takvim Görünümü ───────────────────────────────────────── */
+#view-calendar { flex-direction: column; }
+.cal-scroll { flex: 1; overflow-y: auto; min-height: 0; padding: 16px 20px; }
+.cal-view-wrap { display: flex; gap: 16px; align-items: flex-start; }
+.cal-grid { flex: 1; min-width: 0; }
+.cal-grid-inner {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden;
+}
+.cal-grid-hdr {
+  padding: 8px 4px; text-align: center;
+  font-size: 11px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; background: var(--s2);
+  border-bottom: 1px solid var(--border);
+}
+.cal-grid-cell {
+  min-height: 90px; padding: 6px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+  vertical-align: top;
+}
+.cal-grid-cell:nth-child(7n) { border-right: none; }
+.cal-grid-cell:hover { background: var(--s2); }
+.cal-grid-cell.today { background: color-mix(in srgb, var(--gold) 5%, transparent); }
+.cal-grid-cell.selected { background: color-mix(in srgb, var(--gold) 10%, transparent); outline: 1px solid var(--gold); outline-offset: -2px; }
+.cal-grid-cell.other-month { opacity: 0.3; cursor: default; }
+.cal-grid-cell.drag-over { background: color-mix(in srgb, var(--blue) 15%, transparent); outline: 1px dashed var(--blue); outline-offset: -2px; }
+.cal-cell-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.cal-day-num {
+  font-size: 13px; font-weight: 600; color: var(--text2);
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-day-num.today { background: var(--gold); color: var(--bg); }
+.cal-day-count { font-size: 9px; color: var(--text3); }
+.cal-task-chips { display: flex; flex-direction: column; gap: 2px; }
+.cal-task-chip {
+  font-size: 10px; padding: 1px 5px; border-radius: 3px;
+  background: var(--s3); color: var(--text2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-left: 2px solid var(--text3);
+}
+.cal-task-chip.prio-yuksek { border-left-color: var(--red); }
+.cal-task-chip.prio-orta   { border-left-color: var(--orange); }
+.cal-task-chip.prio-dusuk  { border-left-color: var(--green); }
+.cal-task-chip.done { opacity: 0.45; text-decoration: line-through; }
+.cal-task-more { font-size: 9px; color: var(--text3); padding: 1px 5px; }
+
+/* Gün paneli */
+.cal-day-panel {
+  width: 300px; flex-shrink: 0;
+  background: var(--s1); border: 1px solid var(--border2);
+  border-radius: var(--radius); overflow: hidden;
+  align-self: flex-start; position: sticky; top: 0;
+}
+.cal-day-panel.hidden { display: none; }
+.cal-day-panel-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  background: var(--s2);
+}
+.cal-day-panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.cal-day-panel-list { padding: 10px; max-height: 500px; overflow-y: auto; }
+.cal-day-empty { text-align: center; padding: 24px; font-size: 12px; color: var(--text3); }
+
+/* ── İstatistik iyileştirmeleri ────────────────────────────── */
+.stats-bar-14 { height: 100px; }
+.stats-kpi-card.blue { border-color: color-mix(in srgb, var(--blue) 30%, transparent); }
+.stats-cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.stats-cat-wrap { display: flex; gap: 24px; align-items: center; }
+.stats-pie {
+  width: 110px; height: 110px; border-radius: 50%;
+  flex-shrink: 0; position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.stats-pie-hole {
+  width: 66px; height: 66px; border-radius: 50%;
+  background: var(--s2); display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.stats-pie-hole span { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1; }
+.stats-pie-hole small { font-size: 9px; color: var(--text3); }
+.stats-cat-list { flex: 1; }
+.stats-hour-chart {
+  display: flex; align-items: flex-end; gap: 4px;
+  height: 100px; padding-top: 8px;
+}
+.stats-hour-col {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1;
+}
+.stats-hour-bar {
+  width: 100%; background: var(--blue); border-radius: 3px 3px 0 0;
+  min-height: 4px; transition: height 0.3s;
+}
+.stats-hour-label { font-size: 9px; color: var(--text3); }
+
+/* ── Aylık Alışkanlık Gelişimi ────────────────────────────── */
+.hab-row {
+  margin-bottom: 18px;
+}
+.hab-row-name {
+  font-size: 12px; font-weight: 600; color: var(--text2);
+  margin-bottom: 6px;
+}
+.hab-month-chart {
+  display: flex; gap: 6px; align-items: flex-end;
+  height: 80px; padding-top: 4px;
+  overflow-x: auto;
+}
+.hab-month-col {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; min-width: 38px; flex: 1;
+  cursor: default;
+}
+.hab-month-bar-wrap {
+  flex: 1; width: 100%; display: flex; align-items: flex-end;
+  background: var(--border); border-radius: 3px 3px 0 0; overflow: hidden;
+  min-height: 40px;
+}
+.hab-month-bar {
+  width: 100%; border-radius: 3px 3px 0 0;
+  transition: height 0.4s;
+  min-height: 0;
+}
+.hab-month-pct {
+  font-size: 9px; font-weight: 700; white-space: nowrap;
+}
+.hab-month-lbl {
+  font-size: 9px; color: var(--text3); white-space: nowrap;
+}
+.hab-month-lbl.current { color: var(--gold); font-weight: 600; }
 
   </style>
 
@@ -2614,6 +2830,18 @@ window.makeUID = async function (email, password) {
         <div class="streak-badge" id="streakBadge">🔥 0 gün serisi</div>
         <div class="email-status" id="emailStatus" title="E-posta bağlı değil" onclick="window.openEmailConfig()"></div>
         <div id="sync-indicator" title="Firebase bağlı değil" style="font-size:14px;cursor:default;opacity:0.6"></div>
+        <!-- Bildirim Merkezi -->
+        <div class="notif-bell-wrap" id="notif-bell-wrap">
+          <button class="notif-bell-btn" id="btn-notif-bell" title="Bildirim Merkezi">🔔</button>
+          <span class="notif-bell-badge hidden" id="notif-bell-badge">0</span>
+          <div class="notif-center hidden" id="notif-center">
+            <div class="notif-center-hdr">
+              <span class="notif-center-hdr-title">Bildirimler</span>
+              <button class="btn btn-ghost btn-sm" id="btn-clear-notifs">Temizle</button>
+            </div>
+            <div id="notif-center-list"></div>
+          </div>
+        </div>
         <button class="btn btn-gold" id="btn-new-task">
           <span>+</span> Yeni Görev
         </button>
@@ -2672,6 +2900,10 @@ window.makeUID = async function (email, password) {
           <div class="nav-item" data-nav="stats">
             <span class="nav-icon">📈</span>
             <span>İstatistikler</span>
+          </div>
+          <div class="nav-item" data-nav="calendar">
+            <span class="nav-icon">📆</span>
+            <span>Takvim</span>
           </div>
         </div>
 
@@ -2921,6 +3153,24 @@ window.makeUID = async function (email, password) {
           </div>
         </div>
 
+        <!-- VIEW: Takvim -->
+        <div class="view" id="view-calendar">
+          <div class="view-header">
+            <h2 class="view-title">📆 Takvim</h2>
+            <div class="view-header-right">
+              <button class="btn btn-ghost btn-sm" id="btn-cal-prev">‹</button>
+              <span id="cal-month-label" style="font-size:13px;color:var(--text2);min-width:110px;text-align:center;"></span>
+              <button class="btn btn-ghost btn-sm" id="btn-cal-next">›</button>
+            </div>
+          </div>
+          <div class="cal-scroll">
+            <div class="cal-view-wrap">
+              <div id="cal-grid"></div>
+              <div id="cal-day-panel" class="cal-day-panel hidden"></div>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /main -->
     </div><!-- /body-wrap -->
   </div><!-- /app -->
@@ -2929,7 +3179,28 @@ window.makeUID = async function (email, password) {
   <div id="pomodoro-widget" class="pomo-widget hidden">
     <div class="pomo-header">
       <span class="pomo-task-name" id="pomo-task"></span>
-      <button id="pomo-close" class="pomo-close-btn" title="Kapat">✕</button>
+      <div class="pomo-header-btns">
+        <button id="pomo-settings-btn" class="pomo-close-btn" title="Süreyi Ayarla">⚙️</button>
+        <button id="pomo-close" class="pomo-close-btn" title="Kapat">✕</button>
+      </div>
+    </div>
+    <!-- Ayar Paneli -->
+    <div id="pomo-settings-panel" class="pomo-settings-panel hidden">
+      <div class="pomo-set-row">
+        <label class="pomo-set-label">🎯 Odak süresi</label>
+        <div class="pomo-set-input-wrap">
+          <input type="number" id="pomo-work-min" class="pomo-set-input" min="1" max="120" value="25">
+          <span class="pomo-set-unit">dk</span>
+        </div>
+      </div>
+      <div class="pomo-set-row">
+        <label class="pomo-set-label">☕ Mola süresi</label>
+        <div class="pomo-set-input-wrap">
+          <input type="number" id="pomo-break-min" class="pomo-set-input" min="1" max="60" value="5">
+          <span class="pomo-set-unit">dk</span>
+        </div>
+      </div>
+      <button id="pomo-apply-settings" class="btn btn-gold btn-sm" style="width:100%;justify-content:center;margin-top:4px;">Uygula</button>
     </div>
     <div class="pomo-timer" id="pomo-timer">25:00</div>
     <div class="pomo-mode" id="pomo-mode" data-mode="work">🎯 Odak</div>
@@ -3070,6 +3341,7 @@ window.makeUID = async function (email, password) {
         </div>
       </div>
       <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" id="btn-task-add-block" style="display:none;margin-right:auto;">🗓 Blok Ekle</button>
         <button class="btn btn-ghost" data-close-modal="modal-task">İptal</button>
         <button class="btn btn-gold" id="btn-save-task">Kaydet</button>
       </div>
@@ -3517,8 +3789,56 @@ window.onerror = function (msg, src, line, col, err) {
   return false;
 };
 
+// ── Notification history (bildirim merkezi) ───────────────────
+window._notifHistory = [];
+window._unreadNotifs = 0;
+
+function _notifTimeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60)   return 'Az önce';
+  if (diff < 3600) return `${Math.floor(diff / 60)} dk önce`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} sa önce`;
+  return `${Math.floor(diff / 86400)} gün önce`;
+}
+
+function _updateNotifBadge() {
+  const badge = document.getElementById('notif-bell-badge');
+  if (!badge) return;
+  if (window._unreadNotifs > 0) {
+    badge.textContent = window._unreadNotifs > 9 ? '9+' : window._unreadNotifs;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+function _renderNotifCenter() {
+  const list = document.getElementById('notif-center-list');
+  if (!list) return;
+  if (!window._notifHistory.length) {
+    list.innerHTML = '<div class="notif-center-empty">Henüz bildirim yok</div>';
+    return;
+  }
+  list.innerHTML = window._notifHistory.map(n => `
+    <div class="notif-center-item">
+      <span class="notif-center-icon">${n.icon}</span>
+      <div class="notif-center-body">
+        <div class="notif-center-title">${n.title}</div>
+        ${n.text ? `<div class="notif-center-text">${n.text}</div>` : ''}
+        <div class="notif-center-time">${_notifTimeAgo(n.time)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ── Notifications ─────────────────────────────────────────────
 window.showNotif = function (icon, title, text, duration = 3500) {
+  // Geçmişe ekle
+  window._notifHistory.unshift({ icon, title, text: text || '', time: Date.now() });
+  if (window._notifHistory.length > 60) window._notifHistory.pop();
+  window._unreadNotifs++;
+  _updateNotifBadge();
+
   const container = document.getElementById('notif-container');
   if (!container) return;
 
@@ -3770,6 +4090,25 @@ function escSearchHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// ── Bell button ────────────────────────────────────────────────
+document.getElementById('btn-notif-bell')?.addEventListener('click', e => {
+  e.stopPropagation();
+  const center = document.getElementById('notif-center');
+  if (!center) return;
+  center.classList.toggle('hidden');
+  if (!center.classList.contains('hidden')) {
+    window._unreadNotifs = 0;
+    _updateNotifBadge();
+    _renderNotifCenter();
+  }
+});
+
+document.getElementById('btn-clear-notifs')?.addEventListener('click', e => {
+  e.stopPropagation();
+  window._notifHistory = [];
+  _renderNotifCenter();
+});
+
 // ── Close dropdowns / search panel on outside click ──────────
 document.addEventListener('click', (e) => {
   // Search panel
@@ -3784,6 +4123,13 @@ document.addEventListener('click', (e) => {
   const uavatar = document.getElementById('userAvatar');
   if (udrop && uavatar && !udrop.contains(e.target) && !uavatar.contains(e.target)) {
     udrop.classList.remove('open');
+  }
+
+  // Notif center
+  const ncenter = document.getElementById('notif-center');
+  const nbell   = document.getElementById('notif-bell-wrap');
+  if (ncenter && nbell && !nbell.contains(e.target)) {
+    ncenter.classList.add('hidden');
   }
 
   // Context menus
@@ -3868,6 +4214,24 @@ function createCalCell(day, year, month, todayS, taskDates, otherMonth) {
     el.classList.add('selected');
     window.setNav('today');
   });
+
+  // Drag-drop: görev tarihi değiştirme
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (!taskId) return;
+    const task = (window.g_tasks || []).find(t => t.id === taskId);
+    if (!task) return;
+    task.date = ds;
+    window.saveTask();
+    window.setNav(window.curNav);
+    window.renderMiniCal();
+    window.showNotif('📅', 'Görev Taşındı', `"${task.title}" → ${window.formatDate(ds)}`);
+  });
+
   return el;
 }
 
@@ -3996,6 +4360,151 @@ window.renderThemePicker = function () {
     </div>
   `).join('');
 };
+
+// ── Takvim Görünümü (renderCalendar) ─────────────────────────
+let _calViewYear  = new Date().getFullYear();
+let _calViewMonth = new Date().getMonth();
+let _calSelectedDay = null;
+
+window.renderCalendar = function () {
+  const grid  = document.getElementById('cal-grid');
+  const label = document.getElementById('cal-month-label');
+  if (!grid) return;
+
+  if (label) label.textContent = `${MONTHS[_calViewMonth]} ${_calViewYear}`;
+
+  const todayS       = window.todayStr();
+  const tasks        = window.g_tasks || [];
+  const daysInMonth  = new Date(_calViewYear, _calViewMonth + 1, 0).getDate();
+  const firstDay     = new Date(_calViewYear, _calViewMonth, 1).getDay();
+  const daysInPrev   = new Date(_calViewYear, _calViewMonth, 0).getDate();
+
+  let html = '<div class="cal-grid-inner">';
+
+  // Gün başlıkları
+  DAYS.forEach(d => { html += `<div class="cal-grid-hdr">${d}</div>`; });
+
+  // Önceki ay dolgu
+  for (let i = 0; i < firstDay; i++) {
+    const d = daysInPrev - firstDay + 1 + i;
+    const m = _calViewMonth === 0 ? 11 : _calViewMonth - 1;
+    const y = _calViewMonth === 0 ? _calViewYear - 1 : _calViewYear;
+    const ds = `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="cal-grid-cell other-month" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="window.calDrop('${ds}',event)"><span class="cal-day-num">${d}</span></div>`;
+  }
+
+  // Bu ayın günleri
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds         = `${_calViewYear}-${String(_calViewMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday    = ds === todayS;
+    const isSelected = ds === _calSelectedDay;
+    const dayTasks   = tasks.filter(t => t.date === ds);
+    const doneCnt    = dayTasks.filter(t => t.done).length;
+
+    const chipHtml = dayTasks.slice(0, 3).map(t =>
+      `<div class="cal-task-chip prio-${t.priority} ${t.done ? 'done' : ''}" title="${_escHtml(t.title)}">${_escHtml(t.title.slice(0, 22))}</div>`
+    ).join('') + (dayTasks.length > 3 ? `<div class="cal-task-more">+${dayTasks.length - 3}</div>` : '');
+
+    html += `
+      <div class="cal-grid-cell ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
+           onclick="window.calSelectDay('${ds}')"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="window.calDrop('${ds}',event)">
+        <div class="cal-cell-top">
+          <span class="cal-day-num ${isToday ? 'today' : ''}">${d}</span>
+          ${dayTasks.length ? `<span class="cal-day-count">${doneCnt}/${dayTasks.length}</span>` : ''}
+        </div>
+        <div class="cal-task-chips">${chipHtml}</div>
+      </div>`;
+  }
+
+  // Sonraki ay dolgu
+  const total     = firstDay + daysInMonth;
+  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= remaining; d++) {
+    const m  = _calViewMonth === 11 ? 0 : _calViewMonth + 1;
+    const y  = _calViewMonth === 11 ? _calViewYear + 1 : _calViewYear;
+    const ds = `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="cal-grid-cell other-month" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="window.calDrop('${ds}',event)"><span class="cal-day-num">${d}</span></div>`;
+  }
+
+  html += '</div>';
+  grid.innerHTML = html;
+
+  if (_calSelectedDay) _renderCalDayPanel(_calSelectedDay);
+  else { const p = document.getElementById('cal-day-panel'); if (p) p.classList.add('hidden'); }
+};
+
+window.calSelectDay = function (ds) {
+  _calSelectedDay = _calSelectedDay === ds ? null : ds;
+  window.renderCalendar();
+};
+
+window.calDrop = function (ds, e) {
+  e.preventDefault();
+  e.target.closest?.('.cal-grid-cell')?.classList.remove('drag-over');
+  const taskId = e.dataTransfer.getData('text/plain');
+  if (!taskId) return;
+  const task = (window.g_tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  task.date = ds;
+  window.saveTask();
+  window.renderCalendar();
+  window.renderMiniCal();
+  window.showNotif('📅', 'Görev Taşındı', `"${task.title}" → ${window.formatDate(ds)}`);
+};
+
+function _renderCalDayPanel(ds) {
+  const panel = document.getElementById('cal-day-panel');
+  if (!panel) return;
+  const tasks = (window.g_tasks || []).filter(t => t.date === ds);
+  const [y, m, d] = ds.split('-').map(Number);
+  const dow = new Date(y, m - 1, d).getDay();
+  const title = `${DAYSFULL[dow]}, ${d} ${MONTHS[m - 1]}`;
+
+  panel.classList.remove('hidden');
+  panel.innerHTML = `
+    <div class="cal-day-panel-hdr">
+      <span class="cal-day-panel-title">${title}</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="btn btn-gold btn-sm" onclick="window.openTaskModal(null)">+ Görev</button>
+        <button class="btn btn-ghost btn-sm" onclick="window._calSelectedDay=null;document.getElementById('cal-day-panel').classList.add('hidden');document.querySelectorAll('.cal-grid-cell.selected').forEach(c=>c.classList.remove('selected'))">✕</button>
+      </div>
+    </div>
+    <div class="cal-day-panel-list">
+      ${tasks.length === 0
+        ? '<div class="cal-day-empty">Bu gün görev yok</div>'
+        : tasks.map(t => `
+          <div class="task-card priority-${t.priority} ${t.done ? 'done' : ''}" style="margin-bottom:6px;cursor:default;"
+               draggable="true" ondragstart="window.taskDragStart('${t.id}',event)">
+            <div class="task-check ${t.done ? 'checked' : ''}" onclick="toggleTaskDone('${t.id}',event)">${t.done ? '✓' : ''}</div>
+            <div class="task-body"><div class="task-title">${_escHtml(t.title)}</div></div>
+            <div class="task-actions">
+              <button onclick="openTaskModal('${t.id}',event)">✏️</button>
+            </div>
+          </div>`).join('')}
+    </div>`;
+}
+
+function _escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Takvim navigasyon
+document.getElementById('btn-cal-prev')?.addEventListener('click', () => {
+  _calViewMonth--;
+  if (_calViewMonth < 0) { _calViewMonth = 11; _calViewYear--; }
+  _calSelectedDay = null;
+  window.renderCalendar();
+});
+document.getElementById('btn-cal-next')?.addEventListener('click', () => {
+  _calViewMonth++;
+  if (_calViewMonth > 11) { _calViewMonth = 0; _calViewYear++; }
+  _calSelectedDay = null;
+  window.renderCalendar();
+});
 
   </script>
   <script>
@@ -4656,7 +5165,7 @@ if (!window._appInitialized && document.getElementById('app')?.style.display ===
    navigation.js — View routing and nav menu
    ============================================================ */
 
-const VIEW_IDS = ['list', 'kanban', 'weekly', 'notes', 'tracker', 'schedule', 'stats'];
+const VIEW_IDS = ['list', 'kanban', 'weekly', 'notes', 'tracker', 'schedule', 'stats', 'calendar'];
 
 const VIEW_RENDERERS = {
   today:    () => window.renderTaskList('today'),
@@ -4667,7 +5176,8 @@ const VIEW_RENDERERS = {
   notes:    () => window.renderNotes(),
   tracker:  () => window.renderTracker(),
   schedule: () => window.renderSchedule(),
-  stats:    () => window.renderStats && window.renderStats()
+  stats:    () => window.renderStats && window.renderStats(),
+  calendar: () => window.renderCalendar && window.renderCalendar()
 };
 
 /**
@@ -4688,7 +5198,8 @@ window.setNav = function (nav, el) {
     notes:    'view-notes',
     tracker:  'view-tracker',
     schedule: 'view-schedule',
-    stats:    'view-stats'
+    stats:    'view-stats',
+    calendar: 'view-calendar'
   };
 
   // Hide all views
@@ -4899,7 +5410,8 @@ function buildTaskCard(task) {
 
   return `
     <div class="task-card priority-${task.priority} ${task.done ? 'done' : ''} ${isBlocked ? 'is-blocked' : ''}"
-         data-id="${task.id}" data-real-id="${realId}">
+         data-id="${task.id}" data-real-id="${realId}"
+         draggable="true" ondragstart="window.taskDragStart('${realId}',event)"
       <div class="task-check ${task.done ? 'checked' : ''}" onclick="toggleTaskDone('${realId}', event)">
         ${task.done ? '✓' : ''}
       </div>
@@ -4917,6 +5429,12 @@ function buildTaskCard(task) {
     </div>
   `;
 }
+
+// ── Task drag (tarih değiştirme için) ─────────────────────────
+window.taskDragStart = function (id, e) {
+  e.dataTransfer.setData('text/plain', id);
+  e.dataTransfer.effectAllowed = 'move';
+};
 
 // ── Filter by tag ─────────────────────────────────────────────
 window.filterByTag = function (tag, e) {
@@ -5057,6 +5575,23 @@ window.openTaskModal = function (id, e) {
 
   // Alt görevler
   _renderSubtasks(task ? (task.subtasks || []) : []);
+
+  // Blok Ekle butonu — sadece düzenleme modunda göster
+  const addBlockBtn = document.getElementById('btn-task-add-block');
+  if (addBlockBtn) {
+    if (id) {
+      addBlockBtn.style.display = '';
+      addBlockBtn.onclick = () => {
+        const taskId = id;
+        const taskTitle = document.getElementById('t-title').value.trim();
+        const taskDate  = document.getElementById('t-date').value || window.todayStr();
+        window.closeTaskModal();
+        setTimeout(() => window.openBlockModal(taskDate, null, null, taskId, taskTitle), 60);
+      };
+    } else {
+      addBlockBtn.style.display = 'none';
+    }
+  }
 
   modal.classList.remove('hidden');
   document.getElementById('t-title').focus();
@@ -5348,6 +5883,8 @@ let _dragTaskId = null;
 function _initKanbanDragDrop() {
   document.querySelectorAll('.kanban-task[draggable]').forEach(card => {
     card.addEventListener('dragstart', e => {
+      // Buton veya link üzerinde sürükleme başlatma
+      if (e.target.closest('button, a')) { e.preventDefault(); return; }
       _dragTaskId = card.dataset.id;
       card.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
@@ -6600,6 +7137,27 @@ window.escHtml = escHtml;
     b.done = !b.done;
     window.saveSchedule();
     window.renderSchedule();
+
+    // Bağlı görevi de tamamla?
+    if (b.done && b.taskId) {
+      const task = (window.g_tasks || []).find(t => t.id === b.taskId);
+      if (task && !task.done) {
+        window.showConfirm({
+          icon: '✅',
+          title: 'Görevi de tamamla?',
+          text: `"${task.title}" bağlı görevi de tamamlandı olarak işaretlensin mi?`,
+          confirmText: 'Evet, tamamla',
+          cancelText: 'Hayır'
+        }).then(ok => {
+          if (!ok) return;
+          task.done  = true;
+          task.doneAt = Date.now();
+          window.saveTask();
+          window.updateStats();
+          showNotif('✅', 'Görev Tamamlandı', `"${task.title}" tamamlandı.`);
+        });
+      }
+    }
   };
 
   // ── Drag to reschedule ─────────────────────────────────────
@@ -6771,7 +7329,7 @@ window.escHtml = escHtml;
   };
 
   // ── Block Modal ────────────────────────────────────────────
-  window.openBlockModal = function (key, blockId, defaultStart) {
+  window.openBlockModal = function (key, blockId, defaultStart, preTaskId, preTitle) {
     const modal    = document.getElementById('modal-block');
     const titleEl  = document.getElementById('block-modal-title');
     const delBtn   = document.getElementById('btn-delete-block');
@@ -6788,10 +7346,10 @@ window.escHtml = escHtml;
       : null;
 
     titleEl.textContent = existing ? 'Bloğu Düzenle' : 'Yeni Blok';
-    document.getElementById('block-title').value = existing ? existing.title : '';
+    document.getElementById('block-title').value = existing ? existing.title : (preTitle || '');
     document.getElementById('block-start').value = existing ? existing.start : (defaultStart || '09:00');
     document.getElementById('block-end').value   = existing ? existing.end   : addOneHour(defaultStart || '09:00');
-    taskSel.value = existing?.taskId || '';
+    taskSel.value = existing?.taskId || preTaskId || '';
 
     const repeatSel = document.getElementById('block-repeat');
     if (repeatSel) repeatSel.value = existing?.repeat || 'none';
@@ -6920,24 +7478,44 @@ window.escHtml = escHtml;
     const todayS = window.todayStr();
 
     // ── KPI ────────────────────────────────────────────────────
-    const total    = tasks.length;
-    const done     = tasks.filter(t => t.done).length;
-    const pending  = tasks.filter(t => !t.done).length;
-    const urgent   = tasks.filter(t => t.priority === 'yuksek' && !t.done).length;
-    const rate     = total > 0 ? Math.round(done / total * 100) : 0;
-    const streak   = window.updateStreak ? window.updateStreak() : 0;
+    const total   = tasks.length;
+    const done    = tasks.filter(t => t.done).length;
+    const pending = tasks.filter(t => !t.done).length;
+    const urgent  = tasks.filter(t => t.priority === 'yuksek' && !t.done).length;
+    const rate    = total > 0 ? Math.round(done / total * 100) : 0;
+    const streak  = window.updateStreak ? window.updateStreak() : 0;
 
-    // ── Son 7 gün bar chart ────────────────────────────────────
-    const last7 = [];
-    for (let i = 6; i >= 0; i--) {
+    // ── Son 14 gün ─────────────────────────────────────────────
+    const last14 = [];
+    for (let i = 13; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const ds        = d.toISOString().slice(0, 10);
-      const dayTasks  = tasks.filter(t => t.date === ds);
-      const dayDone   = dayTasks.filter(t => t.done).length;
-      last7.push({ ds, total: dayTasks.length, done: dayDone, label: DAYS[d.getDay()] });
+      const ds       = d.toISOString().slice(0, 10);
+      const dayTasks = tasks.filter(t => t.date === ds);
+      const dayDone  = dayTasks.filter(t => t.done).length;
+      last14.push({ ds, total: dayTasks.length, done: dayDone, label: DAYS[d.getDay()] });
     }
-    const maxBar = Math.max(...last7.map(d => d.total), 1);
+    const maxBar = Math.max(...last14.map(d => d.total), 1);
+
+    // ── Bu ay özet ─────────────────────────────────────────────
+    const monthStart = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+    const monthTasks = tasks.filter(t => t.date >= monthStart && t.date <= todayS);
+    const monthDone  = monthTasks.filter(t => t.done).length;
+
+    // ── En verimli saatler (schedule bloklarından) ─────────────
+    const hourMap = {};
+    Object.values(window.g_schedule || {}).forEach(blocks => {
+      (blocks || []).forEach(b => {
+        if (b.done) {
+          const h = parseInt((b.start || '00:00').split(':')[0], 10);
+          hourMap[h] = (hourMap[h] || 0) + 1;
+        }
+      });
+    });
+    const hourEntries = Object.entries(hourMap)
+      .map(([h, c]) => ({ h: +h, c }))
+      .sort((a, b) => a.h - b.h);
+    const maxHour = Math.max(...hourEntries.map(x => x.c), 1);
 
     // ── Kategori dağılımı ──────────────────────────────────────
     const catMap = {};
@@ -6946,6 +7524,23 @@ window.escHtml = escHtml;
       catMap[c] = (catMap[c] || 0) + 1;
     });
     const cats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+    const catColors = ['var(--gold)','var(--blue)','var(--green)','var(--purple)','var(--orange)','var(--red)'];
+
+    // Conic-gradient için
+    let cumPct = 0;
+    const conicParts = cats.map(([, count], i) => {
+      const pct = count / total * 100;
+      const part = `${catColors[i % catColors.length]} ${cumPct.toFixed(1)}% ${(cumPct + pct).toFixed(1)}%`;
+      cumPct += pct;
+      return part;
+    });
+
+    // ── Kanban durumu ──────────────────────────────────────────
+    const kbMap = { bekliyor: 0, devam: 0, tamamlandi: 0 };
+    tasks.forEach(t => {
+      const s = t.done ? 'tamamlandi' : (t.kanbanStatus || 'bekliyor');
+      kbMap[s] = (kbMap[s] || 0) + 1;
+    });
 
     // ── Sorumlu iş yükü ───────────────────────────────────────
     const assigneeMap = {};
@@ -6954,6 +7549,11 @@ window.escHtml = escHtml;
     });
     const assignees = Object.entries(assigneeMap).sort((a, b) => b[1] - a[1]);
 
+    // ── Aylık alışkanlık gelişimi ──────────────────────────────
+    const trackerCols = window.g_tracker_cols || [];
+    const trackerData = window.g_tracker || {};
+    const habitMonthStats = _calcHabitMonthStats(trackerCols, trackerData);
+
     // ── Etiket dağılımı ───────────────────────────────────────
     const tagMap = {};
     tasks.forEach(t => (t.tags || []).forEach(tag => {
@@ -6961,15 +7561,8 @@ window.escHtml = escHtml;
     }));
     const topTags = Object.entries(tagMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
-    // ── Kanban dağılımı ───────────────────────────────────────
-    const kbMap = { bekliyor: 0, devam: 0, tamamlandi: 0 };
-    tasks.forEach(t => {
-      const s = t.done ? 'tamamlandi' : (t.kanbanStatus || 'bekliyor');
-      kbMap[s] = (kbMap[s] || 0) + 1;
-    });
-
     el.innerHTML = `
-      <!-- KPI Kartları -->
+      <!-- KPI -->
       <div class="stats-kpi-grid">
         <div class="stats-kpi-card">
           <div class="stats-kpi-val">${total}</div>
@@ -6995,16 +7588,24 @@ window.escHtml = escHtml;
           <div class="stats-kpi-val">${streak}</div>
           <div class="stats-kpi-lbl">🔥 Gün Serisi</div>
         </div>
+        <div class="stats-kpi-card blue">
+          <div class="stats-kpi-val">${monthDone}</div>
+          <div class="stats-kpi-lbl">Bu Ay Tamamlandı</div>
+        </div>
+        <div class="stats-kpi-card">
+          <div class="stats-kpi-val">${monthTasks.length}</div>
+          <div class="stats-kpi-lbl">Bu Ay Görev</div>
+        </div>
       </div>
 
-      <!-- Son 7 Gün -->
+      <!-- Son 14 Gün -->
       <div class="stats-section">
-        <div class="stats-section-title">Son 7 Gün</div>
-        <div class="stats-bar-chart">
-          ${last7.map(d => `
+        <div class="stats-section-title">Son 14 Gün</div>
+        <div class="stats-bar-chart stats-bar-14">
+          ${last14.map(d => `
             <div class="stats-bar-col">
               <div class="stats-bar-wrap">
-                <div class="stats-bar-bg" style="height:${Math.round(d.total / maxBar * 100)}%"></div>
+                <div class="stats-bar-bg"  style="height:${Math.round(d.total / maxBar * 100)}%"></div>
                 <div class="stats-bar-fill" style="height:${d.total > 0 ? Math.round(d.done / maxBar * 100) : 0}%"></div>
               </div>
               <div class="stats-bar-label ${d.ds === todayS ? 'today' : ''}">${d.label}</div>
@@ -7014,7 +7615,7 @@ window.escHtml = escHtml;
         </div>
       </div>
 
-      <!-- Kanban Durum -->
+      <!-- Kanban Durumu -->
       <div class="stats-section">
         <div class="stats-section-title">Kanban Durumu</div>
         <div class="stats-kanban-row">
@@ -7033,19 +7634,41 @@ window.escHtml = escHtml;
         </div>
       </div>
 
-      ${cats.length > 0 ? `
-      <!-- Kategori Dağılımı -->
+      ${cats.length > 1 ? `
+      <!-- Kategori Dağılımı (pasta + çubuk) -->
       <div class="stats-section">
         <div class="stats-section-title">Kategori Dağılımı</div>
-        ${cats.map(([cat, count]) => `
-          <div class="stats-cat-row">
-            <span class="stats-cat-label">${escHtml(cat)}</span>
-            <div class="stats-cat-bar-wrap">
-              <div class="stats-cat-bar" style="width:${Math.round(count / total * 100)}%"></div>
-            </div>
-            <span class="stats-cat-count">${count}</span>
+        <div class="stats-cat-wrap">
+          <div class="stats-pie" style="background: conic-gradient(${conicParts.join(',')})">
+            <div class="stats-pie-hole"><span>${total}</span><small>görev</small></div>
           </div>
-        `).join('')}
+          <div class="stats-cat-list">
+            ${cats.map(([cat, count], i) => `
+              <div class="stats-cat-row">
+                <span class="stats-cat-dot" style="background:${catColors[i % catColors.length]}"></span>
+                <span class="stats-cat-label">${escHtml(cat)}</span>
+                <div class="stats-cat-bar-wrap">
+                  <div class="stats-cat-bar" style="width:${Math.round(count/total*100)}%;background:${catColors[i % catColors.length]}"></div>
+                </div>
+                <span class="stats-cat-count">${count}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>` : ''}
+
+      ${hourEntries.length > 0 ? `
+      <!-- En Verimli Saatler -->
+      <div class="stats-section">
+        <div class="stats-section-title">⏰ En Verimli Saatler (Tamamlanan Bloklar)</div>
+        <div class="stats-hour-chart">
+          ${hourEntries.map(({ h, c }) => `
+            <div class="stats-hour-col" title="${h}:00 — ${c} blok">
+              <div class="stats-hour-bar" style="height:${Math.round(c / maxHour * 80)}px"></div>
+              <div class="stats-hour-label">${h}</div>
+            </div>
+          `).join('')}
+        </div>
       </div>` : ''}
 
       ${assignees.length > 0 ? `
@@ -7054,9 +7677,10 @@ window.escHtml = escHtml;
         <div class="stats-section-title">👤 Sorumlu İş Yükü</div>
         ${assignees.map(([name, count]) => `
           <div class="stats-cat-row">
+            <span class="stats-cat-dot" style="background:var(--blue)"></span>
             <span class="stats-cat-label">${escHtml(name)}</span>
             <div class="stats-cat-bar-wrap">
-              <div class="stats-cat-bar assignee" style="width:${Math.round(count / (pending || 1) * 100)}%"></div>
+              <div class="stats-cat-bar assignee" style="width:${Math.round(count/(pending||1)*100)}%"></div>
             </div>
             <span class="stats-cat-count">${count} görev</span>
           </div>
@@ -7073,6 +7697,13 @@ window.escHtml = escHtml;
           `).join('')}
         </div>
       </div>` : ''}
+
+      ${habitMonthStats ? `
+      <!-- Aylık Alışkanlık Gelişimi -->
+      <div class="stats-section">
+        <div class="stats-section-title">📈 Aylık Alışkanlık Gelişimi</div>
+        ${habitMonthStats}
+      </div>` : ''}
     `;
   };
 
@@ -7080,22 +7711,101 @@ window.escHtml = escHtml;
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  // ── Aylık alışkanlık gelişimi hesaplama ────────────────────
+  function _calcHabitMonthStats(cols, data) {
+    if (!cols.length) return null;
+
+    // Mevcut verideki tüm ay-yılları bul
+    const monthSet = new Set();
+    Object.keys(data).forEach(ds => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) monthSet.add(ds.slice(0, 7));
+    });
+
+    // Bugüne kadar olan ayları ekle (veri olmasa bile mevcut ay görünsün)
+    const now = new Date();
+    const curYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    monthSet.add(curYM);
+
+    // Son 12 ayı al, kronolojik sırala
+    const allMonths = [...monthSet].sort();
+    const months = allMonths.slice(-12);
+
+    if (!months.length) return null;
+
+    // Her ay için her kolonu hesapla
+    const monthData = months.map(ym => {
+      const [y, m] = ym.split('-').map(Number);
+      const year  = y;
+      const month = m - 1;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      // Geçmiş mi, şimdiki ay mı, gelecek mi?
+      const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+      const isFuture = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth());
+      if (isFuture) return null;
+
+      const elapsed = isCurrentMonth ? now.getDate() : daysInMonth;
+
+      const colPcts = cols.map((col, ci) => {
+        let count = 0;
+        for (let d = 1; d <= elapsed; d++) {
+          const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          if (data[ds] && data[ds]['c' + ci]) count++;
+        }
+        return elapsed > 0 ? Math.round(count / elapsed * 100) : 0;
+      });
+
+      return { ym, year, month, elapsed, daysInMonth, colPcts, isCurrentMonth };
+    }).filter(Boolean);
+
+    if (!monthData.length) return null;
+
+    // Her alışkanlık için bir satır oluştur
+    const colRows = cols.map((col, ci) => {
+      const bars = monthData.map(md => {
+        const pct = md.colPcts[ci];
+        const color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : pct > 0 ? 'var(--red)' : 'var(--border)';
+        const monthLabel = `${MONTHS[md.month].slice(0, 3)} ${String(md.year).slice(2)}`;
+        return `
+          <div class="hab-month-col" title="${MONTHS[md.month]} ${md.year}: %${pct}${md.isCurrentMonth ? ' (devam ediyor)' : ''}">
+            <div class="hab-month-bar-wrap">
+              <div class="hab-month-bar" style="height:${pct}%;background:${color}"></div>
+            </div>
+            <div class="hab-month-pct" style="color:${color}">${pct > 0 ? pct + '%' : '—'}</div>
+            <div class="hab-month-lbl ${md.isCurrentMonth ? 'current' : ''}">${monthLabel}</div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="hab-row">
+          <div class="hab-row-name">${col.emoji} ${escHtml(col.name)}</div>
+          <div class="hab-month-chart">${bars}</div>
+        </div>`;
+    }).join('');
+
+    return colRows;
+  }
 })();
 
   </script>
   <script>
 /* === pomodoro.js === */
 /* ============================================================
-   pomodoro.js — Pomodoro zamanlayıcısı (25/5 dk)
+   pomodoro.js — Pomodoro zamanlayıcısı (ayarlanabilir süre)
    ============================================================ */
 
 (function () {
-  const WORK_SEC  = 25 * 60;
-  const BREAK_SEC = 5 * 60;
+  // ── Ayarlar (localStorage'dan yükle) ─────────────────────────
+  let _workMin  = parseInt((window.lsGet ? window.lsGet('pomo_work_min',  '25') : localStorage.getItem('pomo_work_min')  || '25'), 10) || 25;
+  let _breakMin = parseInt((window.lsGet ? window.lsGet('pomo_break_min', '5')  : localStorage.getItem('pomo_break_min') || '5'),  10) || 5;
+
+  function workSec()  { return _workMin  * 60; }
+  function breakSec() { return _breakMin * 60; }
 
   let state = {
     mode:     'work',  // 'work' | 'break'
-    seconds:  WORK_SEC,
+    seconds:  workSec(),
     running:  false,
     taskId:   null,
     sessions: 0
@@ -7103,20 +7813,29 @@ window.escHtml = escHtml;
 
   let _interval = null;
 
+  // ── Input'ları mevcut ayarlarla doldur ───────────────────────
+  function _initInputs() {
+    const wIn = document.getElementById('pomo-work-min');
+    const bIn = document.getElementById('pomo-break-min');
+    if (wIn) wIn.value = _workMin;
+    if (bIn) bIn.value = _breakMin;
+  }
+
   // ── Başlat (kanban kartından çağrılır) ───────────────────────
   window.startPomodoro = function (taskId, e) {
-    if (e) e.stopPropagation();
+    if (e) { e.stopPropagation(); e.preventDefault(); }
     const task = (window.g_tasks || []).find(t => t.id === taskId);
     if (!task) return;
 
     clearInterval(_interval);
-    _interval = null;
-    state = { mode: 'work', seconds: WORK_SEC, running: false, taskId, sessions: 0 };
+    state = { mode: 'work', seconds: workSec(), running: true, taskId, sessions: 0 };
+    _interval = setInterval(_tick, 1000);
 
     const widget = document.getElementById('pomodoro-widget');
     if (widget) widget.classList.remove('hidden');
+    _initInputs();
     _render(task.title);
-    showNotif('🍅', 'Pomodoro Hazır', `"${task.title}" için zamanlayıcı başlatıldı.`);
+    showNotif('🍅', 'Pomodoro Başladı', `"${task.title}" — ${_workMin} dk odak süresi başladı.`);
   };
 
   // ── Render ───────────────────────────────────────────────────
@@ -7165,11 +7884,11 @@ window.escHtml = escHtml;
     if (state.mode === 'work') {
       state.sessions++;
       state.mode    = 'break';
-      state.seconds = BREAK_SEC;
-      _notify('🍅 Pomodoro Tamamlandı!', 'Harika iş! 5 dakika mola zamanı.', 'break');
+      state.seconds = breakSec();
+      _notify('🍅 Pomodoro Tamamlandı!', `Harika iş! ${_breakMin} dakika mola zamanı.`, 'break');
     } else {
       state.mode    = 'work';
-      state.seconds = WORK_SEC;
+      state.seconds = workSec();
       _notify('☕ Mola Bitti!', 'Tekrar odaklanma zamanı!', 'work');
     }
     _render();
@@ -7183,40 +7902,78 @@ window.escHtml = escHtml;
   }
 
   // ── Buton bağlamaları ─────────────────────────────────────────
+  _initInputs();
+
   document.getElementById('pomo-toggle')?.addEventListener('click', () => {
-    if (state.running) {
+      if (state.running) {
+        clearInterval(_interval);
+        _interval     = null;
+        state.running = false;
+      } else {
+        state.running = true;
+        _interval     = setInterval(_tick, 1000);
+      }
+      _render();
+    });
+
+    document.getElementById('pomo-reset')?.addEventListener('click', () => {
       clearInterval(_interval);
       _interval     = null;
       state.running = false;
+      state.seconds = state.mode === 'work' ? workSec() : breakSec();
+      _render();
+    });
+
+    document.getElementById('pomo-skip')?.addEventListener('click', () => {
+      clearInterval(_interval);
+      _interval     = null;
+      state.running = false;
+      if (state.mode === 'work') { state.sessions++; state.mode = 'break'; state.seconds = breakSec(); }
+      else                       { state.mode = 'work'; state.seconds = workSec(); }
+      _render();
+    });
+
+    document.getElementById('pomo-close')?.addEventListener('click', () => {
+      clearInterval(_interval);
+      _interval     = null;
+      state.running = false;
+      document.getElementById('pomodoro-widget')?.classList.add('hidden');
+    });
+
+    // ── Ayarlar paneli ─────────────────────────────────────────
+    document.getElementById('pomo-settings-btn')?.addEventListener('click', () => {
+      const panel = document.getElementById('pomo-settings-panel');
+      if (!panel) return;
+      panel.classList.toggle('hidden');
+      _initInputs();
+    });
+
+  document.getElementById('pomo-apply-settings')?.addEventListener('click', () => {
+    const wIn = document.getElementById('pomo-work-min');
+    const bIn = document.getElementById('pomo-break-min');
+    const newWork  = Math.min(120, Math.max(1, parseInt(wIn?.value, 10) || 25));
+    const newBreak = Math.min(60,  Math.max(1, parseInt(bIn?.value, 10) || 5));
+
+    _workMin  = newWork;
+    _breakMin = newBreak;
+
+    if (window.lsSet) {
+      window.lsSet('pomo_work_min',  String(_workMin));
+      window.lsSet('pomo_break_min', String(_breakMin));
     } else {
-      state.running = true;
-      _interval     = setInterval(_tick, 1000);
+      localStorage.setItem('pomo_work_min',  String(_workMin));
+      localStorage.setItem('pomo_break_min', String(_breakMin));
     }
-    _render();
-  });
 
-  document.getElementById('pomo-reset')?.addEventListener('click', () => {
-    clearInterval(_interval);
-    _interval     = null;
-    state.running = false;
-    state.seconds = state.mode === 'work' ? WORK_SEC : BREAK_SEC;
-    _render();
-  });
+    // Timer çalışmıyorsa sıfırla
+    if (!state.running) {
+      state.seconds = state.mode === 'work' ? workSec() : breakSec();
+      _render();
+    }
 
-  document.getElementById('pomo-skip')?.addEventListener('click', () => {
-    clearInterval(_interval);
-    _interval     = null;
-    state.running = false;
-    if (state.mode === 'work') { state.sessions++; state.mode = 'break'; state.seconds = BREAK_SEC; }
-    else                       { state.mode = 'work'; state.seconds = WORK_SEC; }
-    _render();
-  });
-
-  document.getElementById('pomo-close')?.addEventListener('click', () => {
-    clearInterval(_interval);
-    _interval     = null;
-    state.running = false;
-    document.getElementById('pomodoro-widget')?.classList.add('hidden');
+    // Paneli kapat
+    document.getElementById('pomo-settings-panel')?.classList.add('hidden');
+    showNotif('⚙️', 'Pomodoro Ayarlandı', `Odak: ${_workMin} dk / Mola: ${_breakMin} dk`);
   });
 })();
 
