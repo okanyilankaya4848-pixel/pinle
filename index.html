@@ -2557,41 +2557,72 @@ img { display: block; max-width: 100%; }
 }
 .stats-hour-label { font-size: 9px; color: var(--text3); }
 
-/* ── Aylık Alışkanlık Gelişimi ────────────────────────────── */
-.hab-row {
-  margin-bottom: 18px;
+/* ── Alışkanlık Heatmap ─────────────────────────────────────── */
+.hab-heat-row { margin-bottom: 24px; }
+.hab-heat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; flex-wrap: wrap; gap: 6px;
 }
-.hab-row-name {
-  font-size: 12px; font-weight: 600; color: var(--text2);
-  margin-bottom: 6px;
+.hab-heat-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.hab-heat-stats { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hab-heat-stat { font-size: 11px; color: var(--text3); }
+.hab-heat-stat.ok   { color: var(--green); font-weight: 600; }
+.hab-heat-stat.pct  { color: var(--text2); font-weight: 600; }
+.hab-heat-stat.fire { color: var(--gold); }
+
+.hab-heat-grid-wrap {
+  display: flex; gap: 5px; overflow-x: auto;
+  padding-bottom: 4px;
 }
-.hab-month-chart {
-  display: flex; gap: 6px; align-items: flex-end;
-  height: 80px; padding-top: 4px;
-  overflow-x: auto;
+.hab-heat-day-labels {
+  display: flex; flex-direction: column; gap: 2px;
+  padding-top: 18px; /* month label yüksekliği */
+  flex-shrink: 0;
 }
-.hab-month-col {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 3px; min-width: 38px; flex: 1;
+.hab-heat-day-lbl {
+  font-size: 9px; color: var(--text3);
+  height: 13px; line-height: 13px;
+  text-align: right; padding-right: 4px;
+  user-select: none;
+}
+
+.hab-heat-months-grid { display: flex; flex-direction: column; gap: 2px; }
+.hab-heat-month-labels {
+  display: flex; gap: 2px; height: 16px;
+}
+.hab-heat-month-lbl {
+  font-size: 9px; color: var(--text3);
+  line-height: 16px; white-space: nowrap; user-select: none;
+  min-width: 13px;
+}
+.hab-heat-grid { display: flex; gap: 2px; }
+.hab-heat-week { display: flex; flex-direction: column; gap: 2px; }
+
+.hab-heat-cell {
+  width: 13px; height: 13px; border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: var(--s2);
   cursor: default;
+  transition: transform 0.1s;
+  flex-shrink: 0;
 }
-.hab-month-bar-wrap {
-  flex: 1; width: 100%; display: flex; align-items: flex-end;
-  background: var(--border); border-radius: 3px 3px 0 0; overflow: hidden;
-  min-height: 40px;
+.hab-heat-cell:not(.future):hover { transform: scale(1.3); z-index: 1; position: relative; }
+.hab-heat-cell.done-low  { background: color-mix(in srgb, var(--green) 30%, var(--s2)); border-color: color-mix(in srgb, var(--green) 30%, transparent); }
+.hab-heat-cell.done      { background: color-mix(in srgb, var(--green) 60%, var(--s2)); border-color: color-mix(in srgb, var(--green) 60%, transparent); }
+.hab-heat-cell.done-high { background: var(--green); border-color: var(--green); }
+.hab-heat-cell.future    { background: transparent; border-color: transparent; cursor: default; }
+.hab-heat-cell.today     { outline: 1.5px solid var(--gold); outline-offset: 1px; }
+
+.hab-heat-legend {
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 10px; justify-content: flex-end;
 }
-.hab-month-bar {
-  width: 100%; border-radius: 3px 3px 0 0;
-  transition: height 0.4s;
-  min-height: 0;
+.hab-heat-legend-label { font-size: 10px; color: var(--text3); }
+.hab-heat-legend-cells { display: flex; gap: 2px; }
+.hab-heat-legend-cell {
+  width: 11px; height: 11px; border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
-.hab-month-pct {
-  font-size: 9px; font-weight: 700; white-space: nowrap;
-}
-.hab-month-lbl {
-  font-size: 9px; color: var(--text3); white-space: nowrap;
-}
-.hab-month-lbl.current { color: var(--gold); font-weight: 600; }
 
   </style>
 
@@ -7739,10 +7770,20 @@ window.escHtml = escHtml;
       </div>` : ''}
 
       ${habitMonthStats ? `
-      <!-- Aylık Alışkanlık Gelişimi -->
+      <!-- Alışkanlık Heatmap -->
       <div class="stats-section">
-        <div class="stats-section-title">📈 Aylık Alışkanlık Gelişimi</div>
+        <div class="stats-section-title">🟩 Alışkanlık Aktivitesi (Son 6 Ay)</div>
         ${habitMonthStats}
+        <div class="hab-heat-legend">
+          <span class="hab-heat-legend-label">Az</span>
+          <div class="hab-heat-legend-cells">
+            <div class="hab-heat-legend-cell" style="background:var(--s2)"></div>
+            <div class="hab-heat-legend-cell" style="background:color-mix(in srgb,var(--green) 30%,var(--s2))"></div>
+            <div class="hab-heat-legend-cell" style="background:color-mix(in srgb,var(--green) 60%,var(--s2))"></div>
+            <div class="hab-heat-legend-cell" style="background:var(--green)"></div>
+          </div>
+          <span class="hab-heat-legend-label">Çok</span>
+        </div>
       </div>` : ''}
     `;
   };
@@ -7752,79 +7793,124 @@ window.escHtml = escHtml;
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // ── Aylık alışkanlık gelişimi hesaplama ────────────────────
+  // ── Alışkanlık Heatmap hesaplama (GitHub tarzı) ────────────
   function _calcHabitMonthStats(cols, data) {
     if (!cols.length) return null;
 
-    // Mevcut verideki tüm ay-yılları bul
-    const monthSet = new Set();
-    Object.keys(data).forEach(ds => {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) monthSet.add(ds.slice(0, 7));
+    const today   = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayS  = today.toISOString().slice(0, 10);
+    const WEEKS   = 26; // ~6 ay
+
+    // Haftanın Pazartesi'sine hizala, WEEKS hafta geriye git
+    const startDate = new Date(today);
+    const dow = startDate.getDay();                        // 0=Paz
+    startDate.setDate(startDate.getDate() - ((dow + 6) % 7)); // en yakın Pts
+    startDate.setDate(startDate.getDate() - (WEEKS - 1) * 7); // 26 hafta geri
+
+    // Haftalık sütunları oluştur (her sütun 7 gün)
+    const weeks = [];
+    const cursor = new Date(startDate);
+    while (cursor <= today) {
+      const week = [];
+      for (let d = 0; d < 7; d++) {
+        const ds = cursor.toISOString().slice(0, 10);
+        week.push({ ds, isFuture: new Date(cursor) > today });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+
+    // Ay etiketleri: her ay değişim noktasında hangi sütun?
+    const monthLabels = []; // { col: index, label: 'Oca 25' }
+    let lastMonth = -1;
+    weeks.forEach((week, wi) => {
+      const d = new Date(week[0].ds);
+      if (d.getMonth() !== lastMonth) {
+        lastMonth = d.getMonth();
+        monthLabels.push({ col: wi, label: MONTHS[d.getMonth()].slice(0, 3) + ' ' + String(d.getFullYear()).slice(2) });
+      }
     });
 
-    // Bugüne kadar olan ayları ekle (veri olmasa bile mevcut ay görünsün)
-    const now = new Date();
-    const curYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    monthSet.add(curYM);
+    // Gün etiketleri: Pts, Ça, Cu (satır 0=Pts, 2=Çar, 4=Cu)
+    const dayLabels = ['Pt', '', 'Ça', '', 'Cu', '', ''];
 
-    // Son 12 ayı al, kronolojik sırala
-    const allMonths = [...monthSet].sort();
-    const months = allMonths.slice(-12);
+    // Her alışkanlık için heatmap satırı üret
+    const rows = cols.map((col, ci) => {
+      let totalDays = 0, doneDays = 0, streak = 0;
 
-    if (!months.length) return null;
-
-    // Her ay için her kolonu hesapla
-    const monthData = months.map(ym => {
-      const [y, m] = ym.split('-').map(Number);
-      const year  = y;
-      const month = m - 1;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-      // Geçmiş mi, şimdiki ay mı, gelecek mi?
-      const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
-      const isFuture = year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth());
-      if (isFuture) return null;
-
-      const elapsed = isCurrentMonth ? now.getDate() : daysInMonth;
-
-      const colPcts = cols.map((col, ci) => {
-        let count = 0;
-        for (let d = 1; d <= elapsed; d++) {
-          const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-          if (data[ds] && data[ds]['c' + ci]) count++;
+      // İstatistik hesapla
+      weeks.forEach(week => week.forEach(cell => {
+        if (!cell.isFuture) {
+          totalDays++;
+          if ((data[cell.ds] || {})['c' + ci]) doneDays++;
         }
-        return elapsed > 0 ? Math.round(count / elapsed * 100) : 0;
-      });
+      }));
+      const pct = totalDays > 0 ? Math.round(doneDays / totalDays * 100) : 0;
 
-      return { ym, year, month, elapsed, daysInMonth, colPcts, isCurrentMonth };
-    }).filter(Boolean);
+      // Mevcut seri
+      for (let i = 0; i < 180; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().slice(0, 10);
+        if ((data[ds] || {})['c' + ci]) streak++;
+        else if (i > 0) break;
+      }
 
-    if (!monthData.length) return null;
+      // Ay etiketi satırı
+      const monthRow = weeks.map((_, wi) => {
+        const ml = monthLabels.find(m => m.col === wi);
+        return `<div class="hab-heat-month-lbl" style="width:13px">${ml ? ml.label : ''}</div>`;
+      }).join('');
 
-    // Her alışkanlık için bir satır oluştur
-    const colRows = cols.map((col, ci) => {
-      const bars = monthData.map(md => {
-        const pct = md.colPcts[ci];
-        const color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--gold)' : pct > 0 ? 'var(--red)' : 'var(--border)';
-        const monthLabel = `${MONTHS[md.month].slice(0, 3)} ${String(md.year).slice(2)}`;
-        return `
-          <div class="hab-month-col" title="${MONTHS[md.month]} ${md.year}: %${pct}${md.isCurrentMonth ? ' (devam ediyor)' : ''}">
-            <div class="hab-month-bar-wrap">
-              <div class="hab-month-bar" style="height:${pct}%;background:${color}"></div>
-            </div>
-            <div class="hab-month-pct" style="color:${color}">${pct > 0 ? pct + '%' : '—'}</div>
-            <div class="hab-month-lbl ${md.isCurrentMonth ? 'current' : ''}">${monthLabel}</div>
-          </div>`;
+      // Hücre grid'i
+      const gridHtml = weeks.map(week => {
+        const cells = week.map(cell => {
+          if (cell.isFuture) return `<div class="hab-heat-cell future"></div>`;
+          const done = !!(data[cell.ds] || {})['c' + ci];
+          const isToday = cell.ds === todayS;
+          // Yoğunluk: bugün için done-high, eski için done (orta)
+          // Eğer birden fazla alışkanlık tamamlandıysa daha yoğun göster
+          let cls = 'hab-heat-cell';
+          if (done) {
+            // Aynı günde kaç alışkanlık tamamlandı → yoğunluk
+            const row = data[cell.ds] || {};
+            const totalDoneDay = cols.reduce((acc, _, idx) => acc + (row['c' + idx] ? 1 : 0), 0);
+            const ratio = totalDoneDay / cols.length;
+            cls += ratio >= 0.75 ? ' done-high' : ratio >= 0.4 ? ' done' : ' done-low';
+          }
+          if (isToday) cls += ' today';
+          const [, m, d] = cell.ds.split('-');
+          const dObj = new Date(cell.ds);
+          const tooltip = `${dObj.getDate()} ${MONTHS[dObj.getMonth()]} ${dObj.getFullYear()}${done ? ' ✓' : ''}`;
+          return `<div class="${cls}" title="${tooltip}"></div>`;
+        }).join('');
+        return `<div class="hab-heat-week">${cells}</div>`;
       }).join('');
 
       return `
-        <div class="hab-row">
-          <div class="hab-row-name">${col.emoji} ${escHtml(col.name)}</div>
-          <div class="hab-month-chart">${bars}</div>
+        <div class="hab-heat-row">
+          <div class="hab-heat-header">
+            <span class="hab-heat-name">${col.emoji} ${escHtml(col.name)}</span>
+            <div class="hab-heat-stats">
+              <span class="hab-heat-stat ok">✓ ${doneDays}/${totalDays}</span>
+              <span class="hab-heat-stat pct">%${pct}</span>
+              ${streak > 1 ? `<span class="hab-heat-stat fire">🔥 ${streak} gün seri</span>` : ''}
+            </div>
+          </div>
+          <div class="hab-heat-grid-wrap">
+            <div class="hab-heat-day-labels">
+              ${dayLabels.map(l => `<div class="hab-heat-day-lbl">${l}</div>`).join('')}
+            </div>
+            <div class="hab-heat-months-grid">
+              <div class="hab-heat-month-labels">${monthRow}</div>
+              <div class="hab-heat-grid">${gridHtml}</div>
+            </div>
+          </div>
         </div>`;
     }).join('');
 
-    return colRows;
+    return rows || null;
   }
 })();
 
@@ -7833,6 +7919,8 @@ window.escHtml = escHtml;
 /* === pomodoro.js === */
 /* ============================================================
    pomodoro.js — Pomodoro zamanlayıcısı (ayarlanabilir süre)
+   Zaman hesabı: setInterval tick sayımı yerine Date.now() farkı
+   kullanılır — arka planda/sekme inaktifken sürüklenme olmaz.
    ============================================================ */
 
 (function () {
@@ -7844,14 +7932,23 @@ window.escHtml = escHtml;
   function breakSec() { return _breakMin * 60; }
 
   let state = {
-    mode:     'work',  // 'work' | 'break'
+    mode:     'work',   // 'work' | 'break'
     seconds:  workSec(),
     running:  false,
     taskId:   null,
     sessions: 0
   };
 
-  let _interval = null;
+  let _interval       = null;
+  let _startTimestamp = null;  // Date.now() — son kez başlatıldığı an
+  let _secondsAtStart = 0;     // başlatılırken kalan saniye
+
+  // ── Gerçek zamana dayalı kalan saniye ───────────────────────
+  function _getRemaining() {
+    if (!state.running || _startTimestamp === null) return state.seconds;
+    const elapsed = Math.floor((Date.now() - _startTimestamp) / 1000);
+    return Math.max(0, _secondsAtStart - elapsed);
+  }
 
   // ── Input'ları mevcut ayarlarla doldur ───────────────────────
   function _initInputs() {
@@ -7867,9 +7964,9 @@ window.escHtml = escHtml;
     const task = (window.g_tasks || []).find(t => t.id === taskId);
     if (!task) return;
 
-    clearInterval(_interval);
+    _stopTimer();
     state = { mode: 'work', seconds: workSec(), running: true, taskId, sessions: 0 };
-    _interval = setInterval(_tick, 1000);
+    _startTimer();
 
     const widget = document.getElementById('pomodoro-widget');
     if (widget) widget.classList.remove('hidden');
@@ -7878,10 +7975,27 @@ window.escHtml = escHtml;
     showNotif('🍅', 'Pomodoro Başladı', `"${task.title}" — ${_workMin} dk odak süresi başladı.`);
   };
 
+  // ── Timer başlat / durdur yardımcıları ───────────────────────
+  function _startTimer() {
+    _startTimestamp = Date.now();
+    _secondsAtStart = state.seconds;
+    state.running   = true;
+    _interval = setInterval(_tick, 500); // 500ms — hızlı tick ama yük değil
+  }
+
+  function _stopTimer() {
+    if (_interval) { clearInterval(_interval); _interval = null; }
+    // Mevcut kalan süreyi kaydet (sonraki devam için)
+    state.seconds   = _getRemaining();
+    state.running   = false;
+    _startTimestamp = null;
+  }
+
   // ── Render ───────────────────────────────────────────────────
   function _render(taskName) {
-    const m = Math.floor(state.seconds / 60);
-    const s = state.seconds % 60;
+    const remaining = _getRemaining();
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
 
     const get = id => document.getElementById(id);
     const timerEl  = get('pomo-timer');
@@ -7909,17 +8023,17 @@ window.escHtml = escHtml;
     if (widget) widget.dataset.mode = state.mode;
   }
 
-  // ── Tick ─────────────────────────────────────────────────────
+  // ── Tick: sadece tamamlanma kontrolü yapar ───────────────────
   function _tick() {
-    if (state.seconds > 0) {
-      state.seconds--;
+    const remaining = _getRemaining();
+
+    if (remaining > 0) {
       _render();
       return;
     }
 
-    clearInterval(_interval);
-    _interval = null;
-    state.running = false;
+    // Süre doldu
+    _stopTimer();
 
     if (state.mode === 'work') {
       state.sessions++;
@@ -7931,6 +8045,9 @@ window.escHtml = escHtml;
       state.seconds = workSec();
       _notify('☕ Mola Bitti!', 'Tekrar odaklanma zamanı!', 'work');
     }
+
+    // Otomatik devam et
+    _startTimer();
     _render();
   }
 
@@ -7941,52 +8058,53 @@ window.escHtml = escHtml;
     }
   }
 
+  // ── Sekme/sayfa görünürlük değişince yeniden render ──────────
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state.running) {
+      _render(); // Doğrudan Date.now() farkını göster
+    }
+  });
+
   // ── Buton bağlamaları ─────────────────────────────────────────
   _initInputs();
 
   document.getElementById('pomo-toggle')?.addEventListener('click', () => {
-      if (state.running) {
-        clearInterval(_interval);
-        _interval     = null;
-        state.running = false;
-      } else {
-        state.running = true;
-        _interval     = setInterval(_tick, 1000);
-      }
-      _render();
-    });
+    if (state.running) {
+      _stopTimer();
+    } else {
+      _startTimer();
+    }
+    _render();
+  });
 
-    document.getElementById('pomo-reset')?.addEventListener('click', () => {
-      clearInterval(_interval);
-      _interval     = null;
-      state.running = false;
-      state.seconds = state.mode === 'work' ? workSec() : breakSec();
-      _render();
-    });
+  document.getElementById('pomo-reset')?.addEventListener('click', () => {
+    _stopTimer();
+    state.seconds = state.mode === 'work' ? workSec() : breakSec();
+    _render();
+  });
 
-    document.getElementById('pomo-skip')?.addEventListener('click', () => {
-      clearInterval(_interval);
-      _interval     = null;
-      state.running = false;
-      if (state.mode === 'work') { state.sessions++; state.mode = 'break'; state.seconds = breakSec(); }
-      else                       { state.mode = 'work'; state.seconds = workSec(); }
-      _render();
-    });
+  document.getElementById('pomo-skip')?.addEventListener('click', () => {
+    _stopTimer();
+    if (state.mode === 'work') { state.sessions++; state.mode = 'break'; state.seconds = breakSec(); }
+    else                       { state.mode = 'work'; state.seconds = workSec(); }
+    _startTimer();
+    _render();
+  });
 
-    document.getElementById('pomo-close')?.addEventListener('click', () => {
-      clearInterval(_interval);
-      _interval     = null;
-      state.running = false;
-      document.getElementById('pomodoro-widget')?.classList.add('hidden');
-    });
+  document.getElementById('pomo-close')?.addEventListener('click', () => {
+    _stopTimer();
+    state.running = false;
+    _startTimestamp = null;
+    document.getElementById('pomodoro-widget')?.classList.add('hidden');
+  });
 
-    // ── Ayarlar paneli ─────────────────────────────────────────
-    document.getElementById('pomo-settings-btn')?.addEventListener('click', () => {
-      const panel = document.getElementById('pomo-settings-panel');
-      if (!panel) return;
-      panel.classList.toggle('hidden');
-      _initInputs();
-    });
+  // ── Ayarlar paneli ─────────────────────────────────────────
+  document.getElementById('pomo-settings-btn')?.addEventListener('click', () => {
+    const panel = document.getElementById('pomo-settings-panel');
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+    _initInputs();
+  });
 
   document.getElementById('pomo-apply-settings')?.addEventListener('click', () => {
     const wIn = document.getElementById('pomo-work-min');
@@ -8011,7 +8129,6 @@ window.escHtml = escHtml;
       _render();
     }
 
-    // Paneli kapat
     document.getElementById('pomo-settings-panel')?.classList.add('hidden');
     showNotif('⚙️', 'Pomodoro Ayarlandı', `Odak: ${_workMin} dk / Mola: ${_breakMin} dk`);
   });
