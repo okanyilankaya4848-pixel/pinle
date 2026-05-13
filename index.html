@@ -6608,9 +6608,10 @@ window.escHtml = escHtml;
     html += '</tr></thead><tbody>';
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const dateObj = new Date(year, month, d);
-      const dow = dateObj.getDay();
       const ds  = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      // UTC tabanlı oluştur: yerel saat dilimi kaymasından etkilenmez
+      const dateObj = new Date(ds + 'T00:00:00');
+      const dow = dateObj.getDay();
       const isWeekend  = dow === 0 || dow === 6;
       const isToday    = ds === todayS;
       const rowData    = data[ds] || {};
@@ -7006,10 +7007,18 @@ window.escHtml = escHtml;
   }
 
   // Re-export renderTracker
-  window.renderTracker = function () {
+  window.renderTracker = async function () {
     updateTrackerHeader();
     renderTrackerTable();
     renderTrackerProgress();
+    // Tracker görünümüne girildiğinde Firebase'den son veriyi çek
+    if (window._fbReady && window._fbUid) {
+      try {
+        await window.loadFromFirebase();
+      } catch (e) { /* çevrimdışı — sorun değil */ }
+      renderTrackerTable();
+      renderTrackerProgress();
+    }
   };
 })();
 
@@ -8186,22 +8195,45 @@ window.loadFromFirebase = async function () {
     const all = await window.fbLoadAll();
     const pfx = 'u_' + window._fbUid + '_';
     // Boş array/obje ile yerel veriyi EZME — daha büyük olanı koru
-    const setIfBigger = (key, fbVal, isArr) => {
-      if (fbVal == null) return;
-      const local = lsGet(pfx + key, null);
-      const fbSize = isArr ? (fbVal.length || 0) : Object.keys(fbVal).length;
-      const localSize = local ? (isArr ? (local.length || 0) : Object.keys(local).length) : 0;
-      if (fbSize > localSize) {
-        lsSet(pfx + key, fbVal);
-        window[key] = fbVal;
-      }
+    // Dizi verilerini birleştir: Firebase'deki eksik ID'leri yerel listeye ekle
+    const mergeArr = (key, fbVal) => {
+      if (!fbVal || !Array.isArray(fbVal)) return;
+      const local = lsGet(pfx + key, null) || [];
+      const localIds = new Set(local.map(x => x.id));
+      const merged = [...local];
+      fbVal.forEach(item => { if (!localIds.has(item.id)) merged.push(item); });
+      lsSet(pfx + key, merged);
+      window[key] = merged;
     };
-    setIfBigger('g_tasks',        all.g_tasks,        true);
-    setIfBigger('g_notes',        all.g_notes,        true);
-    setIfBigger('g_notebooks',    all.g_notebooks,    true);
-    setIfBigger('g_tracker_cols', all.g_tracker_cols, true);
-    setIfBigger('g_tracker',      all.g_tracker,      false);
-    setIfBigger('g_schedule',     all.g_schedule,     false);
+
+    // Obje verilerini birleştir: Firebase'deki tarih anahtarlarını yerel objeye ekle/güncelle
+    const mergeObj = (key, fbVal) => {
+      if (!fbVal || typeof fbVal !== 'object') return;
+      const local = lsGet(pfx + key, null) || {};
+      // Her tarih anahtarı için: ikisinde de varsa hücre bazında birleştir, sadece birinde varsa al
+      const merged = { ...fbVal };
+      Object.keys(local).forEach(ds => {
+        if (!merged[ds]) {
+          merged[ds] = local[ds];
+        } else {
+          // Hücre bazında birleştir: işaretli olan kazanır
+          const mergedDay = { ...local[ds] };
+          Object.keys(fbVal[ds] || {}).forEach(k => {
+            if (fbVal[ds][k]) mergedDay[k] = fbVal[ds][k]; // Firebase'de true ise uygula
+          });
+          merged[ds] = mergedDay;
+        }
+      });
+      lsSet(pfx + key, merged);
+      window[key] = merged;
+    };
+
+    mergeArr('g_tasks',        all.g_tasks);
+    mergeArr('g_notes',        all.g_notes);
+    mergeArr('g_notebooks',    all.g_notebooks);
+    mergeArr('g_tracker_cols', all.g_tracker_cols);
+    mergeObj('g_tracker',      all.g_tracker);
+    mergeObj('g_schedule',     all.g_schedule);
     if (all.g_reminders?.times?.length > (window.g_reminders?.times?.length || 0)) {
       lsSet(pfx + 'g_reminders', all.g_reminders);
       window.g_reminders = all.g_reminders;
