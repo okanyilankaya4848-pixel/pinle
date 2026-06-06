@@ -3776,10 +3776,21 @@ function saveSchedule() {
   scheduleSync();
 }
 
-// ── Today string ─────────────────────────────────────────────
+// ── Today string — yerel tarih (UTC değil, saat dilimi kaymasını önler) ──────
 function todayStr() {
   const d = new Date();
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// ── Tarih nesnesini YYYY-MM-DD string'ine çevir (yerel saat dilimi) ───────────
+function dateToStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 // ── Expose ───────────────────────────────────────────────────
@@ -3795,6 +3806,7 @@ window.saveReminders = saveReminders;
 window.saveTracker   = saveTracker;
 window.saveSchedule  = saveSchedule;
 window.todayStr      = todayStr;
+window.dateToStr     = dateToStr;
 
   </script>
   <script>
@@ -3961,7 +3973,7 @@ window.updateStreak = function () {
   for (let i = 0; i < 30; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const ds = d.toISOString().slice(0, 10);
+    const ds = window.dateToStr(d);
     const hasDone = tasks.some(t => t.date === ds && t.done);
     if (hasDone) {
       streak++;
@@ -5352,8 +5364,8 @@ function expandRepeats(tasks, startDate, endDate) {
       if (cursor < start) continue;
       result.push({
         ...task,
-        id: task.id + '_r' + cursor.toISOString().slice(0, 10),
-        date: cursor.toISOString().slice(0, 10),
+        id: task.id + '_r' + window.dateToStr(cursor),
+        date: window.dateToStr(cursor),
         _isVirtual: true
       });
     }
@@ -6168,7 +6180,7 @@ window.renderWeekly = function () {
   const todayS = window.todayStr();
 
   grid.innerHTML = weekDays.map(day => {
-    const ds = day.toISOString().slice(0, 10);
+    const ds = window.dateToStr(day);
     const dayTasks = tasks.filter(t => t.date === ds);
     const isToday = ds === todayS;
     return `
@@ -6609,9 +6621,9 @@ window.escHtml = escHtml;
 
     for (let d = 1; d <= daysInMonth; d++) {
       const ds  = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      // UTC tabanlı oluştur: yerel saat dilimi kaymasından etkilenmez
-      const dateObj = new Date(ds + 'T00:00:00');
-      const dow = dateObj.getDay();
+      // Saat dilimi kaymasını önlemek için tarihi yerel olarak oluştur
+      const dateObj = new Date(year, month, d);
+      const dow = dateObj.getDay(); // 0=Pazar, 1=Pazartesi, ..., 6=Cumartesi
       const isWeekend  = dow === 0 || dow === 6;
       const isToday    = ds === todayS;
       const rowData    = data[ds] || {};
@@ -6942,8 +6954,8 @@ window.escHtml = escHtml;
     // ── Notes created/updated this day ───────────────────────
     const allNotes = window.g_notes || [];
     const dayNotes = allNotes.filter(n => {
-      const created = n.createdAt ? new Date(n.createdAt).toISOString().slice(0, 10) : null;
-      const updated = n.updatedAt ? new Date(n.updatedAt).toISOString().slice(0, 10) : null;
+      const created = n.createdAt ? window.dateToStr(new Date(n.createdAt)) : null;
+      const updated = n.updatedAt ? window.dateToStr(new Date(n.updatedAt)) : null;
       return created === ds || updated === ds;
     });
 
@@ -7007,17 +7019,13 @@ window.escHtml = escHtml;
   }
 
   // Re-export renderTracker
-  window.renderTracker = async function () {
+  window.renderTracker = function () {
     updateTrackerHeader();
     renderTrackerTable();
     renderTrackerProgress();
-    // Tracker görünümüne girildiğinde Firebase'den son veriyi çek
+    // Tracker görünümüne girildiğinde arka planda Firebase'den senkronize et
     if (window._fbReady && window._fbUid) {
-      try {
-        await window.loadFromFirebase();
-      } catch (e) { /* çevrimdışı — sorun değil */ }
-      renderTrackerTable();
-      renderTrackerProgress();
+      window.loadFromFirebase().catch(() => {});
     }
   };
 })();
@@ -7059,7 +7067,11 @@ window.escHtml = escHtml;
 
   // ── Date helpers ───────────────────────────────────────────
   function ds(date) {
-    return date.toISOString().slice(0, 10);
+    // Yerel saat dilimi kullan — toISOString UTC döndürür ve gün kaymasına yol açar
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   function addDays(date, n) {
@@ -7570,7 +7582,7 @@ window.escHtml = escHtml;
     for (let i = 13; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const ds       = d.toISOString().slice(0, 10);
+      const ds       = window.dateToStr ? window.dateToStr(d) : d.toISOString().slice(0, 10);
       const dayTasks = tasks.filter(t => t.date === ds);
       const dayDone  = dayTasks.filter(t => t.done).length;
       last14.push({ ds, total: dayTasks.length, done: dayDone, label: DAYS[d.getDay()] });
@@ -7808,7 +7820,7 @@ window.escHtml = escHtml;
 
     const today   = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayS  = today.toISOString().slice(0, 10);
+    const todayS  = window.dateToStr ? window.dateToStr(today) : window.todayStr();
     const WEEKS   = 26; // ~6 ay
 
     // Haftanın Pazartesi'sine hizala, WEEKS hafta geriye git
@@ -7823,7 +7835,7 @@ window.escHtml = escHtml;
     while (cursor <= today) {
       const week = [];
       for (let d = 0; d < 7; d++) {
-        const ds = cursor.toISOString().slice(0, 10);
+        const ds = window.dateToStr ? window.dateToStr(cursor) : cursor.toISOString().slice(0, 10);
         week.push({ ds, isFuture: new Date(cursor) > today });
         cursor.setDate(cursor.getDate() + 1);
       }
@@ -7861,7 +7873,7 @@ window.escHtml = escHtml;
       for (let i = 0; i < 180; i++) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
-        const ds = d.toISOString().slice(0, 10);
+        const ds = window.dateToStr ? window.dateToStr(d) : d.toISOString().slice(0, 10);
         if ((data[ds] || {})['c' + ci]) streak++;
         else if (i > 0) break;
       }
@@ -8194,32 +8206,52 @@ window.loadFromFirebase = async function () {
   try {
     const all = await window.fbLoadAll();
     const pfx = 'u_' + window._fbUid + '_';
-    // Boş array/obje ile yerel veriyi EZME — daha büyük olanı koru
-    // Dizi verilerini birleştir: Firebase'deki eksik ID'leri yerel listeye ekle
+
+    // Dizi verilerini birleştir: ID bazında, hiçbir kayıt silinmez
     const mergeArr = (key, fbVal) => {
       if (!fbVal || !Array.isArray(fbVal)) return;
       const local = lsGet(pfx + key, null) || [];
-      const localIds = new Set(local.map(x => x.id));
-      const merged = [...local];
-      fbVal.forEach(item => { if (!localIds.has(item.id)) merged.push(item); });
+      const localMap = new Map(local.map(x => [x.id, x]));
+      fbVal.forEach(item => {
+        if (!item || !item.id) return;
+        if (!localMap.has(item.id)) {
+          localMap.set(item.id, item); // Bulutta var, yerel'de yok → ekle
+        }
+        // Yerel'de varsa yerel kazanır (son işlem önceliği)
+      });
+      const merged = Array.from(localMap.values());
       lsSet(pfx + key, merged);
       window[key] = merged;
     };
 
-    // Obje verilerini birleştir: Firebase'deki tarih anahtarlarını yerel objeye ekle/güncelle
+    // Obje verilerini birleştir: tarih+hücre bazında, işaretliler korunur
     const mergeObj = (key, fbVal) => {
       if (!fbVal || typeof fbVal !== 'object') return;
       const local = lsGet(pfx + key, null) || {};
-      // Her tarih anahtarı için: ikisinde de varsa hücre bazında birleştir, sadece birinde varsa al
-      const merged = { ...fbVal };
-      Object.keys(local).forEach(ds => {
-        if (!merged[ds]) {
-          merged[ds] = local[ds];
+      const merged = {};
+      // Önce tüm anahtarları topla
+      const allKeys = new Set([...Object.keys(local), ...Object.keys(fbVal)]);
+      allKeys.forEach(ds => {
+        const localDay = local[ds] || {};
+        const fbDay   = fbVal[ds] || {};
+        if (!local[ds]) {
+          merged[ds] = fbDay; // Sadece Firebase'de var
+        } else if (!fbVal[ds]) {
+          merged[ds] = localDay; // Sadece yerel'de var
         } else {
-          // Hücre bazında birleştir: işaretli olan kazanır
-          const mergedDay = { ...local[ds] };
-          Object.keys(fbVal[ds] || {}).forEach(k => {
-            if (fbVal[ds][k]) mergedDay[k] = fbVal[ds][k]; // Firebase'de true ise uygula
+          // Her ikisinde de var: hücre bazında birleştir
+          // İşaretlenmiş (true) olan kazanır, not için en uzun olan kazanır
+          const mergedDay = { ...fbDay };
+          Object.keys(localDay).forEach(k => {
+            if (k === 'note') {
+              // Dolu not varsa koru
+              if (localDay.note && (!mergedDay.note || localDay.note.length >= mergedDay.note.length)) {
+                mergedDay.note = localDay.note;
+              }
+            } else {
+              // Hücre: true olan kazanır
+              if (localDay[k] === true) mergedDay[k] = true;
+            }
           });
           merged[ds] = mergedDay;
         }
@@ -8234,7 +8266,9 @@ window.loadFromFirebase = async function () {
     mergeArr('g_tracker_cols', all.g_tracker_cols);
     mergeObj('g_tracker',      all.g_tracker);
     mergeObj('g_schedule',     all.g_schedule);
-    if (all.g_reminders?.times?.length > (window.g_reminders?.times?.length || 0)) {
+
+    // Hatırlatıcılar: sadece daha fazla item varsa güncelle
+    if ((all.g_reminders?.times?.length || 0) > (window.g_reminders?.times?.length || 0)) {
       lsSet(pfx + 'g_reminders', all.g_reminders);
       window.g_reminders = all.g_reminders;
     }
