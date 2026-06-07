@@ -1423,6 +1423,85 @@ img { display: block; max-width: 100%; }
   text-align: center;
 }
 
+.tracker-yearly {
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+.tracker-yearly-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tracker-yearly-year {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text3);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.tracker-yearly-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+}
+@media (max-width: 700px) {
+  .tracker-yearly-grid { grid-template-columns: repeat(6, 1fr); }
+}
+.tracker-yearly-month {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 6px 4px;
+  transition: background 0.15s;
+}
+.tracker-yearly-month:hover { background: var(--s2); }
+.tracker-yearly-month.current { outline: 2px solid var(--gold); outline-offset: 1px; }
+.tracker-yearly-month-name {
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.tracker-yearly-month-ring {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  position: relative;
+}
+.tracker-yearly-month-ring svg {
+  position: absolute;
+  top: 0; left: 0;
+  transform: rotate(-90deg);
+}
+.tracker-yearly-month-pct {
+  position: relative;
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 700;
+}
+.tracker-yearly-month.future .tracker-yearly-month-pct { color: var(--text3); }
+.tracker-yearly-month-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--s3);
+}
+
 .tracker-table-wrap {
   overflow-x: auto;
   border-radius: var(--radius);
@@ -3180,6 +3259,7 @@ window.makeUID = async function (email, password) {
             <h2 class="view-title">📈 İstatistikler</h2>
           </div>
           <div class="stats-scroll">
+            <div id="tracker-yearly-wrap"></div>
             <div id="stats-dashboard"></div>
           </div>
         </div>
@@ -3735,7 +3815,16 @@ function loadState() {
   window.g_user         = lsGet('g_user', null);
   window.g_tracker      = lsGet(pfx + 'g_tracker', {});
   window.g_tracker_cols = lsGet(pfx + 'g_tracker_cols', []);
-  window.g_schedule     = lsGet(pfx + 'g_schedule', {});
+  // g_schedule: her gün anahtarının değeri array olmalı, obje ise düzelt
+  const _rawSched = lsGet(pfx + 'g_schedule', {});
+  if (_rawSched && typeof _rawSched === 'object') {
+    Object.keys(_rawSched).forEach(k => {
+      if (_rawSched[k] && !Array.isArray(_rawSched[k])) {
+        _rawSched[k] = Object.values(_rawSched[k]).filter(b => b && typeof b === 'object');
+      }
+    });
+  }
+  window.g_schedule = _rawSched || {};
 }
 
 // ── Save state to localStorage ───────────────────────────────
@@ -3776,21 +3865,12 @@ function saveSchedule() {
   scheduleSync();
 }
 
-// ── Today string — yerel tarih (UTC değil, saat dilimi kaymasını önler) ──────
+// ── Today string — yerel tarih (toISOString UTC verir, gece kayması yapar) ────
 function todayStr() {
   const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-// ── Tarih nesnesini YYYY-MM-DD string'ine çevir (yerel saat dilimi) ───────────
-function dateToStr(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
 }
 
 // ── Expose ───────────────────────────────────────────────────
@@ -3806,7 +3886,6 @@ window.saveReminders = saveReminders;
 window.saveTracker   = saveTracker;
 window.saveSchedule  = saveSchedule;
 window.todayStr      = todayStr;
-window.dateToStr     = dateToStr;
 
   </script>
   <script>
@@ -3973,7 +4052,7 @@ window.updateStreak = function () {
   for (let i = 0; i < 30; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const ds = window.dateToStr(d);
+    const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     const hasDone = tasks.some(t => t.date === ds && t.done);
     if (hasDone) {
       streak++;
@@ -5364,8 +5443,8 @@ function expandRepeats(tasks, startDate, endDate) {
       if (cursor < start) continue;
       result.push({
         ...task,
-        id: task.id + '_r' + window.dateToStr(cursor),
-        date: window.dateToStr(cursor),
+        id: task.id + '_r' + cursor.toISOString().slice(0, 10),
+        date: cursor.toISOString().slice(0, 10),
         _isVirtual: true
       });
     }
@@ -6180,7 +6259,7 @@ window.renderWeekly = function () {
   const todayS = window.todayStr();
 
   grid.innerHTML = weekDays.map(day => {
-    const ds = window.dateToStr(day);
+    const ds = day.toISOString().slice(0, 10);
     const dayTasks = tasks.filter(t => t.date === ds);
     const isToday = ds === todayS;
     return `
@@ -6620,10 +6699,9 @@ window.escHtml = escHtml;
     html += '</tr></thead><tbody>';
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const ds  = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      // Saat dilimi kaymasını önlemek için tarihi yerel olarak oluştur
       const dateObj = new Date(year, month, d);
-      const dow = dateObj.getDay(); // 0=Pazar, 1=Pazartesi, ..., 6=Cumartesi
+      const dow = dateObj.getDay();
+      const ds  = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const isWeekend  = dow === 0 || dow === 6;
       const isToday    = ds === todayS;
       const rowData    = data[ds] || {};
@@ -6662,10 +6740,27 @@ window.escHtml = escHtml;
     window.g_tracker = window.g_tracker || {};
     window.g_tracker[ds] = window.g_tracker[ds] || {};
     const key = 'c' + ci;
-    window.g_tracker[ds][key] = !window.g_tracker[ds][key];
+    const newVal = !window.g_tracker[ds][key];
+    window.g_tracker[ds][key] = newVal;
     window.saveTracker();
-    // Re-render table and progress instantly
-    renderTrackerTable();
+
+    // Hücreyi DOM'da in-place güncelle, tam render yapma
+    // (Tam render: Firebase sync 2sn sonra g_tracker'ı ezer, işaret kaybolur)
+    const cols = window.g_tracker_cols || [];
+    const col  = cols[ci];
+    const cell = document.querySelector(
+      '.tracker-cell[data-date="' + ds + '"][data-col="' + ci + '"]'
+    );
+    if (cell) {
+      if (newVal) {
+        cell.classList.add('checked');
+        cell.textContent = col ? col.emoji : '\u2713';
+      } else {
+        cell.classList.remove('checked');
+        cell.textContent = '';
+      }
+    }
+    // Progress bölümünü yenile
     renderTrackerProgress();
   };
 
@@ -6870,6 +6965,92 @@ window.escHtml = escHtml;
     `;
   }
 
+  // ── Yearly overview ───────────────────────────────────────
+  function renderTrackerYearly() {
+    const wrap = document.getElementById('tracker-yearly-wrap');
+    if (!wrap) return;
+
+    const cols = window.g_tracker_cols || [];
+    if (cols.length === 0) { wrap.innerHTML = ''; return; }
+
+    const data   = window.g_tracker || {};
+    const today  = new Date();
+    const curYear  = today.getFullYear();
+    const curMonth = today.getMonth();
+
+    // Gösterilecek yıllar: veri olan yıllar + bu yıl
+    const years = new Set([curYear]);
+    Object.keys(data).forEach(ds => {
+      const y = parseInt(ds.slice(0, 4), 10);
+      if (y >= 2020 && y <= curYear) years.add(y);
+    });
+    const sortedYears = Array.from(years).sort((a, b) => b - a); // En yeni önce
+
+    let html = '<div class="tracker-yearly">';
+    html += '<div class="tracker-yearly-title">📅 Yıllık Genel Bakış</div>';
+
+    sortedYears.forEach(yr => {
+      html += `<div class="tracker-yearly-year">${yr}</div>`;
+      html += '<div class="tracker-yearly-grid">';
+
+      for (let mo = 0; mo < 12; mo++) {
+        const isFuture = yr > curYear || (yr === curYear && mo > curMonth);
+        const isCurrent = yr === curYear && mo === curMonth;
+        const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+        const elapsed = isFuture ? 0 : (isCurrent ? today.getDate() : daysInMonth);
+
+        let checked = 0, possible = elapsed * cols.length;
+        if (!isFuture && elapsed > 0) {
+          for (let d = 1; d <= elapsed; d++) {
+            const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            cols.forEach((_, ci) => {
+              if ((data[ds] || {})['c' + ci]) checked++;
+            });
+          }
+        }
+
+        const pct = possible > 0 ? Math.round(checked / possible * 100) : 0;
+        // Renk: yeşil ≥80, altın 50-79, kırmızı <50, gri gelecek
+        const color = isFuture ? 'var(--s3)'
+                    : pct >= 80 ? 'var(--green)'
+                    : pct >= 50 ? 'var(--gold)'
+                    : pct > 0   ? 'var(--red)'
+                    : 'var(--s3)';
+
+        // SVG çember (ring)
+        const R = 15, C = 18, circumference = 2 * Math.PI * R;
+        const dash = isFuture ? 0 : Math.round(pct / 100 * circumference * 10) / 10;
+        const gap  = circumference - dash;
+
+        const monthShort = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'][mo];
+
+        html += `
+          <div class="tracker-yearly-month ${isCurrent ? 'current' : ''} ${isFuture ? 'future' : ''}"
+               title="${monthShort} ${yr}: ${isFuture ? 'Henüz gelmedi' : '%' + pct + ' (' + checked + '/' + possible + ')'}"
+               onclick="window.trackerYear=${yr};window.trackerMonth=${mo};if(typeof window.setNav==='function'){window.setNav('tracker');}else{window.renderTracker();}" >
+            <div class="tracker-yearly-month-name">${monthShort}</div>
+            <div class="tracker-yearly-month-ring">
+              <svg width="36" height="36" viewBox="0 0 36 36">
+                <circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="var(--s3)" stroke-width="3"/>
+                ${!isFuture && pct > 0 ? `<circle cx="${C}" cy="${C}" r="${R}" fill="none"
+                  stroke="${color}" stroke-width="3"
+                  stroke-dasharray="${dash} ${gap}"
+                  stroke-linecap="round"/>` : ''}
+              </svg>
+              <span class="tracker-yearly-month-pct" style="color:${isFuture ? 'var(--text3)' : color}">
+                ${isFuture ? '–' : pct + '%'}
+              </span>
+            </div>
+          </div>`;
+      }
+
+      html += '</div>'; // grid
+    });
+
+    html += '</div>'; // tracker-yearly
+    wrap.innerHTML = html;
+  }
+
   // ── Month navigation ───────────────────────────────────────
   document.getElementById('btn-tracker-prev')?.addEventListener('click', () => {
     window.trackerMonth--;
@@ -6954,8 +7135,8 @@ window.escHtml = escHtml;
     // ── Notes created/updated this day ───────────────────────
     const allNotes = window.g_notes || [];
     const dayNotes = allNotes.filter(n => {
-      const created = n.createdAt ? window.dateToStr(new Date(n.createdAt)) : null;
-      const updated = n.updatedAt ? window.dateToStr(new Date(n.updatedAt)) : null;
+      const created = n.createdAt ? new Date(n.createdAt).toISOString().slice(0, 10) : null;
+      const updated = n.updatedAt ? new Date(n.updatedAt).toISOString().slice(0, 10) : null;
       return created === ds || updated === ds;
     });
 
@@ -7019,6 +7200,8 @@ window.escHtml = escHtml;
   }
 
   // Re-export renderTracker
+  window.renderTrackerYearly = renderTrackerYearly;
+
   window.renderTracker = function () {
     updateTrackerHeader();
     renderTrackerTable();
@@ -7067,11 +7250,10 @@ window.escHtml = escHtml;
 
   // ── Date helpers ───────────────────────────────────────────
   function ds(date) {
-    // Yerel saat dilimi kullan — toISOString UTC döndürür ve gün kaymasına yol açar
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+    // toISOString() UTC döndürür — yerel saat diliminde gün kayması yapar
+    return date.getFullYear() + '-' +
+      String(date.getMonth() + 1).padStart(2, '0') + '-' +
+      String(date.getDate()).padStart(2, '0');
   }
 
   function addDays(date, n) {
@@ -7109,15 +7291,25 @@ window.escHtml = escHtml;
     return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
   }
 
+  // ── g_schedule'daki bir anahtarın değerini güvenli array'e çevir
+  function safeBlocks(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    // Obje olarak kaydedilmişse (Firebase veya eski kayıt) değerlerini al
+    if (typeof val === 'object') return Object.values(val).filter(b => b && typeof b === 'object');
+    return [];
+  }
+
   // ── Tekrar eden blokları genişlet ─────────────────────────────
   function expandScheduleBlocks(key) {
-    const direct = (window.g_schedule[key] || []).slice();
+    if (!window.g_schedule) window.g_schedule = {};
+    const direct = safeBlocks(window.g_schedule[key]).slice();
     const extras = [];
 
     // Diğer günlerdeki tekrarlayan bloklara bak
     Object.entries(window.g_schedule).forEach(([srcKey, blocks]) => {
       if (srcKey === key) return;
-      (blocks || []).forEach(b => {
+      safeBlocks(blocks).forEach(b => {
         if (!b.repeat || b.repeat === 'none') return;
         const srcDate = new Date(srcKey + 'T00:00:00');
         const tgtDate = new Date(key + 'T00:00:00');
@@ -7144,6 +7336,8 @@ window.escHtml = escHtml;
   function renderDayView() {
     const body = document.getElementById('schedule-body');
     if (!body) return;
+    if (!window.g_schedule) window.g_schedule = {};
+    if (!window.g_tasks)    window.g_tasks    = [];
 
     const key    = ds(scheduleDate);
     const blocks = expandScheduleBlocks(key);
@@ -7224,7 +7418,11 @@ window.escHtml = escHtml;
     if (e) e.stopPropagation();
     const blocks = window.g_schedule[key];
     if (!blocks) return;
-    const b = blocks.find(x => x.id === blockId);
+    // Array değilse düzelt
+    if (!Array.isArray(window.g_schedule[key])) {
+      window.g_schedule[key] = Object.values(window.g_schedule[key]).filter(b => b && typeof b === 'object');
+    }
+    const b = window.g_schedule[key].find(x => x.id === blockId);
     if (!b) return;
     b.done = !b.done;
     window.saveSchedule();
@@ -7433,9 +7631,10 @@ window.escHtml = escHtml;
     taskSel.innerHTML = '<option value="">— Görev seçme —</option>' +
       tasks.map(t => `<option value="${t.id}">${escHtml(t.title)}</option>`).join('');
 
-    const existing = blockId
-      ? (window.g_schedule[key] || []).find(b => b.id === blockId)
-      : null;
+    const _modalBlocks = Array.isArray(window.g_schedule[key])
+      ? window.g_schedule[key]
+      : Object.values(window.g_schedule[key] || {}).filter(b => b && typeof b === 'object');
+    const existing = blockId ? _modalBlocks.find(b => b.id === blockId) : null;
 
     titleEl.textContent = existing ? 'Bloğu Düzenle' : 'Yeni Blok';
     document.getElementById('block-title').value = existing ? existing.title : (preTitle || '');
@@ -7481,7 +7680,11 @@ window.escHtml = escHtml;
       return;
     }
 
-    window.g_schedule[key] = window.g_schedule[key] || [];
+    if (!Array.isArray(window.g_schedule[key])) {
+      window.g_schedule[key] = window.g_schedule[key]
+        ? Object.values(window.g_schedule[key]).filter(b => b && typeof b === 'object')
+        : [];
+    }
 
     if (blockId) {
       const idx = window.g_schedule[key].findIndex(b => b.id === blockId);
@@ -7496,7 +7699,10 @@ window.escHtml = escHtml;
   }
 
   function deleteBlock(key, blockId) {
-    window.g_schedule[key] = (window.g_schedule[key] || []).filter(b => b.id !== blockId);
+    const _existingBlocks = Array.isArray(window.g_schedule[key])
+      ? window.g_schedule[key]
+      : Object.values(window.g_schedule[key] || {}).filter(b => b && typeof b === 'object');
+    window.g_schedule[key] = _existingBlocks.filter(b => b.id !== blockId);
     window.saveSchedule();
     document.getElementById('modal-block').classList.add('hidden');
     window.renderSchedule();
@@ -7562,12 +7768,20 @@ window.escHtml = escHtml;
 
 (function () {
   window.renderStats = function () {
+    // Yıllık özeti her zaman renderStats başında güncelle
+    if (typeof renderTrackerYearly === 'function') renderTrackerYearly();
+    else if (typeof window.renderTrackerYearly === 'function') window.renderTrackerYearly();
+
     const el = document.getElementById('stats-dashboard');
     if (!el) return;
+    if (!window.g_tasks)        window.g_tasks        = [];
+    if (!window.g_schedule)     window.g_schedule     = {};
+    if (!window.g_tracker)      window.g_tracker      = {};
+    if (!window.g_tracker_cols) window.g_tracker_cols = [];
 
     const tasks  = window.g_tasks || [];
     const today  = new Date();
-    const todayS = window.todayStr();
+    const todayS = window.todayStr ? window.todayStr() : (new Date()).toISOString().slice(0,10);
 
     // ── KPI ────────────────────────────────────────────────────
     const total   = tasks.length;
@@ -7582,7 +7796,7 @@ window.escHtml = escHtml;
     for (let i = 13; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const ds       = window.dateToStr ? window.dateToStr(d) : d.toISOString().slice(0, 10);
+      const ds       = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
       const dayTasks = tasks.filter(t => t.date === ds);
       const dayDone  = dayTasks.filter(t => t.done).length;
       last14.push({ ds, total: dayTasks.length, done: dayDone, label: DAYS[d.getDay()] });
@@ -7640,11 +7854,6 @@ window.escHtml = escHtml;
       assigneeMap[t.assignee] = (assigneeMap[t.assignee] || 0) + 1;
     });
     const assignees = Object.entries(assigneeMap).sort((a, b) => b[1] - a[1]);
-
-    // ── Aylık alışkanlık gelişimi ──────────────────────────────
-    const trackerCols = window.g_tracker_cols || [];
-    const trackerData = window.g_tracker || {};
-    const habitMonthStats = _calcHabitMonthStats(trackerCols, trackerData);
 
     // ── Etiket dağılımı ───────────────────────────────────────
     const tagMap = {};
@@ -7790,22 +7999,6 @@ window.escHtml = escHtml;
         </div>
       </div>` : ''}
 
-      ${habitMonthStats ? `
-      <!-- Alışkanlık Heatmap -->
-      <div class="stats-section">
-        <div class="stats-section-title">🟩 Alışkanlık Aktivitesi (Son 6 Ay)</div>
-        ${habitMonthStats}
-        <div class="hab-heat-legend">
-          <span class="hab-heat-legend-label">Az</span>
-          <div class="hab-heat-legend-cells">
-            <div class="hab-heat-legend-cell" style="background:var(--s2)"></div>
-            <div class="hab-heat-legend-cell" style="background:color-mix(in srgb,var(--green) 30%,var(--s2))"></div>
-            <div class="hab-heat-legend-cell" style="background:color-mix(in srgb,var(--green) 60%,var(--s2))"></div>
-            <div class="hab-heat-legend-cell" style="background:var(--green)"></div>
-          </div>
-          <span class="hab-heat-legend-label">Çok</span>
-        </div>
-      </div>` : ''}
     `;
   };
 
@@ -7820,7 +8013,7 @@ window.escHtml = escHtml;
 
     const today   = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayS  = window.dateToStr ? window.dateToStr(today) : window.todayStr();
+    const todayS  = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
     const WEEKS   = 26; // ~6 ay
 
     // Haftanın Pazartesi'sine hizala, WEEKS hafta geriye git
@@ -7835,7 +8028,7 @@ window.escHtml = escHtml;
     while (cursor <= today) {
       const week = [];
       for (let d = 0; d < 7; d++) {
-        const ds = window.dateToStr ? window.dateToStr(cursor) : cursor.toISOString().slice(0, 10);
+        const ds = cursor.getFullYear() + '-' + String(cursor.getMonth()+1).padStart(2,'0') + '-' + String(cursor.getDate()).padStart(2,'0');
         week.push({ ds, isFuture: new Date(cursor) > today });
         cursor.setDate(cursor.getDate() + 1);
       }
@@ -7873,7 +8066,7 @@ window.escHtml = escHtml;
       for (let i = 0; i < 180; i++) {
         const d = new Date(today);
         d.setDate(d.getDate() - i);
-        const ds = window.dateToStr ? window.dateToStr(d) : d.toISOString().slice(0, 10);
+        const ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         if ((data[ds] || {})['c' + ci]) streak++;
         else if (i > 0) break;
       }
@@ -8206,56 +8399,48 @@ window.loadFromFirebase = async function () {
   try {
     const all = await window.fbLoadAll();
     const pfx = 'u_' + window._fbUid + '_';
-
-    // Dizi verilerini birleştir: ID bazında, hiçbir kayıt silinmez
+    // Dizi: ID bazında birleştir — hiçbir kayıt silinmez
     const mergeArr = (key, fbVal) => {
       if (!fbVal || !Array.isArray(fbVal)) return;
       const local = lsGet(pfx + key, null) || [];
       const localMap = new Map(local.map(x => [x.id, x]));
       fbVal.forEach(item => {
-        if (!item || !item.id) return;
-        if (!localMap.has(item.id)) {
-          localMap.set(item.id, item); // Bulutta var, yerel'de yok → ekle
-        }
-        // Yerel'de varsa yerel kazanır (son işlem önceliği)
+        if (item && item.id && !localMap.has(item.id)) localMap.set(item.id, item);
       });
       const merged = Array.from(localMap.values());
       lsSet(pfx + key, merged);
       window[key] = merged;
     };
 
-    // Obje verilerini birleştir: tarih+hücre bazında, işaretliler korunur
+    // Obje (tracker/schedule): tarih+hücre bazında birleştir — true olan kazanır
     const mergeObj = (key, fbVal) => {
       if (!fbVal || typeof fbVal !== 'object') return;
       const local = lsGet(pfx + key, null) || {};
       const merged = {};
-      // Önce tüm anahtarları topla
       const allKeys = new Set([...Object.keys(local), ...Object.keys(fbVal)]);
       allKeys.forEach(ds => {
-        const localDay = local[ds] || {};
-        const fbDay   = fbVal[ds] || {};
-        if (!local[ds]) {
-          merged[ds] = fbDay; // Sadece Firebase'de var
-        } else if (!fbVal[ds]) {
-          merged[ds] = localDay; // Sadece yerel'de var
-        } else {
-          // Her ikisinde de var: hücre bazında birleştir
-          // İşaretlenmiş (true) olan kazanır, not için en uzun olan kazanır
-          const mergedDay = { ...fbDay };
-          Object.keys(localDay).forEach(k => {
-            if (k === 'note') {
-              // Dolu not varsa koru
-              if (localDay.note && (!mergedDay.note || localDay.note.length >= mergedDay.note.length)) {
-                mergedDay.note = localDay.note;
-              }
-            } else {
-              // Hücre: true olan kazanır
-              if (localDay[k] === true) mergedDay[k] = true;
-            }
-          });
-          merged[ds] = mergedDay;
-        }
+        const L = local[ds] || {};
+        const F = fbVal[ds]  || {};
+        if (!local[ds]) { merged[ds] = F; return; }
+        if (!fbVal[ds]) { merged[ds] = L; return; }
+        const m = Object.assign({}, F);
+        Object.keys(L).forEach(k => {
+          if (k === 'note') {
+            if (L.note && (!m.note || L.note.length >= m.note.length)) m.note = L.note;
+          } else {
+            if (L[k] === true) m[k] = true;
+          }
+        });
+        merged[ds] = m;
       });
+      // g_schedule için array normalize et
+      if (key === 'g_schedule') {
+        Object.keys(merged).forEach(k => {
+          if (merged[k] && !Array.isArray(merged[k])) {
+            merged[k] = Object.values(merged[k]).filter(b => b && typeof b === 'object');
+          }
+        });
+      }
       lsSet(pfx + key, merged);
       window[key] = merged;
     };
@@ -8266,16 +8451,15 @@ window.loadFromFirebase = async function () {
     mergeArr('g_tracker_cols', all.g_tracker_cols);
     mergeObj('g_tracker',      all.g_tracker);
     mergeObj('g_schedule',     all.g_schedule);
-
-    // Hatırlatıcılar: sadece daha fazla item varsa güncelle
     if ((all.g_reminders?.times?.length || 0) > (window.g_reminders?.times?.length || 0)) {
       lsSet(pfx + 'g_reminders', all.g_reminders);
       window.g_reminders = all.g_reminders;
     }
     console.log('[Pinle] Loaded from Firebase.');
 
-    // Buluttan gelen veriyle ekranı yenile
-    if (typeof window.setNav === 'function') {
+    // Tracker ekranındayken setNav çağırma:
+    // setNav('tracker') → renderTracker() → tablo+progress sıfırlanır → işaretler kaybolur
+    if (typeof window.setNav === 'function' && window.curNav !== 'tracker') {
       window.setNav(window.curNav || 'today');
     }
     if (typeof window.updateStats         === 'function') window.updateStats();
