@@ -6664,6 +6664,31 @@ window.escHtml = escHtml;
     if (el) el.textContent = `${MONTHS[window.trackerMonth]} ${window.trackerYear}`;
   }
 
+  // ── Tracker table event delegation (bir kez bağlanır) ──────
+  document.addEventListener('DOMContentLoaded', function () {
+    const wrap = document.getElementById('tracker-table-wrap');
+    if (!wrap) return;
+    wrap.addEventListener('click', function (e) {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
+      const ds     = target.dataset.date;
+      const ci     = target.dataset.col !== undefined ? parseInt(target.dataset.col, 10) : null;
+
+      if (action === 'toggle') {
+        window.toggleTrackerCell(ds, ci);
+      } else if (action === 'edit-note') {
+        window.editTrackerNote(ds, target);
+      } else if (action === 'day-detail') {
+        if (typeof window.openDayDetail === 'function') window.openDayDetail(ds);
+      } else if (action === 'edit-col') {
+        if (typeof window.editTrackerCol === 'function') window.editTrackerCol(ci);
+      } else if (action === 'del-col') {
+        if (typeof window.deleteTrackerCol === 'function') window.deleteTrackerCol(ci);
+      }
+    });
+  });
+
   // ── Table ─────────────────────────────────────────────────
   function renderTrackerTable() {
     const wrap = document.getElementById('tracker-table-wrap');
@@ -6724,7 +6749,7 @@ window.escHtml = escHtml;
 
       const note = rowData.note || '';
       html += `<td>
-        <div class="tracker-note-cell" onclick="editTrackerNote('${ds}', this)">
+        <div class="tracker-note-cell" data-action="edit-note" data-date="${ds}">
           <span class="note-text">${escHtml(note) || '<span style="color:var(--text3);font-size:11px">+</span>'}</span>
         </div>
       </td>`;
@@ -6733,6 +6758,7 @@ window.escHtml = escHtml;
 
     html += '</tbody></table>';
     wrap.innerHTML = html;
+
   }
 
   // ── Toggle cell ────────────────────────────────────────────
@@ -6766,32 +6792,55 @@ window.escHtml = escHtml;
 
   // ── Edit note inline ───────────────────────────────────────
   window.editTrackerNote = function (ds, el) {
-    const data   = window.g_tracker[ds] || {};
-    const current = data.note || '';
+    // Zaten düzenleme modundaysa tekrar açma
+    if (el.querySelector('input')) return;
+
+    window.g_tracker       = window.g_tracker       || {};
+    window.g_tracker[ds]   = window.g_tracker[ds]   || {};
+    const current = window.g_tracker[ds].note || '';
 
     const input = document.createElement('input');
-    input.type = 'text';
+    input.type  = 'text';
     input.className = 'tracker-note-input';
     input.value = current;
+
     el.innerHTML = '';
     el.appendChild(input);
-    input.focus();
 
+    // Tıklama olayının üst elemanlara yayılmasını durdur
+    input.addEventListener('mousedown', e => e.stopPropagation());
+    input.addEventListener('click',     e => e.stopPropagation());
+
+    let saved = false;
     const save = () => {
+      if (saved) return;
+      saved = true;
       const val = input.value.trim();
-      window.g_tracker[ds] = window.g_tracker[ds] || {};
+      window.g_tracker[ds]      = window.g_tracker[ds] || {};
       window.g_tracker[ds].note = val;
       window.saveTracker();
-      el.innerHTML = `<span class="note-text">${escHtml(val) || '<span style="color:var(--text3);font-size:11px">+</span>'}</span>`;
+      // el hâlâ DOM'da mı kontrol et
+      if (el && el.parentNode) {
+        el.innerHTML = `<span class="note-text">${escHtml(val) || '<span style="color:var(--text3);font-size:11px">+</span>'}</span>`;
+      }
     };
 
-    input.addEventListener('blur', save);
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { input.blur(); }
-      if (e.key === 'Escape') {
+    const cancel = () => {
+      if (saved) return;
+      saved = true;
+      if (el && el.parentNode) {
         el.innerHTML = `<span class="note-text">${escHtml(current) || '<span style="color:var(--text3);font-size:11px">+</span>'}</span>`;
       }
+    };
+
+    input.addEventListener('blur',    save);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { cancel(); }
     });
+
+    // Küçük gecikmeyle focus — mobilde klavye açılmasını garantile
+    setTimeout(() => input.focus(), 30);
   };
 
   // ── Add column ─────────────────────────────────────────────
