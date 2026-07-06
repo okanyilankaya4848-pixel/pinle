@@ -2717,11 +2717,11 @@ import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/1
 
 // Built-in Firebase config — tüm kullanıcılar bu projeye bağlanır
 window._BUILTIN_FB_CFG = {
-  apiKey:            "AIzaSyDGRpKNtkI_9blmfZrpMBI4vH691AAjuzc",
-  authDomain:        "pinlee.firebaseapp.com",
-  projectId:         "pinlee",
-  storageBucket:     "pinlee.appspot.com",
-  appId:             "1:419515948173:web:950420ab5f9055225c16c4"
+  apiKey:            "",
+  authDomain:        "",
+  projectId:         "",
+  storageBucket:     "",
+  appId:             ""
 };
 
 let _db = null;
@@ -2840,6 +2840,14 @@ window.makeUID = async function (email, password) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
+// Hesap doğrulama token'ı — e-postayı açığa çıkarmadan hesap varlığını kanıtlar
+// Firebase _accounts koleksiyonuna bu kaydedilir, e-posta değil
+window.makeAccountToken = async function (email) {
+  const msg = 'pinle_account:' + email.toLowerCase().trim();
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return 'tok_' + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').slice(0,32);
+};
+
   </script>
 </head>
 <body>
@@ -2874,556 +2882,6 @@ window.makeUID = async function (email, password) {
       <!-- Register form -->
       <div id="form-register">
         <div id="err-register" class="login-error"></div>
-        <div class="form-group">
-          <label class="form-label">Ad Soyad</label>
-          <input id="reg-name" class="form-input" type="text" placeholder="Adınız">
-        </div>
-        <div class="form-group">
-          <label class="form-label">E-posta</label>
-          <input id="reg-email" class="form-input" type="email" placeholder="ornek@email.com">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Şifre</label>
-          <input id="reg-pass" class="form-input" type="password" placeholder="En az 6 karakter">
-        </div>
-        <label class="remember-row">
-          <input type="checkbox" id="reg-remember" checked>
-          Beni Hatırla
-        </label>
-        <button class="btn btn-gold" style="width:100%;justify-content:center;" id="btn-register">
-          Hesap Oluştur
-        </button>
-      </div>
-
-      <!-- Login form -->
-      <div id="form-login" style="display:none;">
-        <div id="err-login" class="login-error"></div>
-        <div class="form-group">
-          <label class="form-label">E-posta</label>
-          <input id="login-email" class="form-input" type="email" placeholder="ornek@email.com">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Şifre</label>
-          <input id="login-pass" class="form-input" type="password" placeholder="Şifreniz">
-        </div>
-        <label class="remember-row">
-          <input type="checkbox" id="login-remember" checked>
-          Beni Hatırla
-        </label>
-        <button class="btn btn-gold" style="width:100%;justify-content:center;" id="btn-login">
-          Giriş Yap
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── App Shell ─────────────────────────────────────────────── -->
-  <div id="app" style="display:none; flex-direction:column; height:100vh; overflow:hidden;">
-
-    <!-- ── Topbar ──────────────────────────────────────────────── -->
-    <div id="topbar">
-      <div class="topbar-logo" onclick="window.setNav('today')" style="cursor:pointer;">
-        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="16" cy="16" r="16" fill="#16161a"/>
-          <path d="M16 5 C12.5 5 9 8.2 9 12 C9 17.5 16 25 16 25 C16 25 23 17.5 23 12 C23 8.2 19.5 5 16 5Z" fill="#d4a853"/>
-          <circle cx="16" cy="12" r="3.5" fill="#0f0f11"/>
-          <line x1="16" y1="25" x2="16" y2="29" stroke="#d4a853" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-        <span>Pinle</span>
-      </div>
-      <div class="topbar-search" style="position:relative;">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="topbar-search" placeholder="Görev, not veya program ara... (Ctrl+K)">
-        <div id="search-results-panel" class="search-panel hidden"></div>
-      </div>
-      <div class="topbar-right">
-        <div class="streak-badge" id="streakBadge">🔥 0 gün serisi</div>
-        <div class="email-status" id="emailStatus" title="E-posta bağlı değil" onclick="window.openEmailConfig()"></div>
-        <div id="sync-indicator" title="Firebase bağlı değil" style="font-size:14px;cursor:default;opacity:0.6"></div>
-        <!-- Bildirim Merkezi -->
-        <div class="notif-bell-wrap" id="notif-bell-wrap">
-          <button class="notif-bell-btn" id="btn-notif-bell" title="Bildirim Merkezi">🔔</button>
-          <span class="notif-bell-badge hidden" id="notif-bell-badge">0</span>
-          <div class="notif-center hidden" id="notif-center">
-            <div class="notif-center-hdr">
-              <span class="notif-center-hdr-title">Bildirimler</span>
-              <button class="btn btn-ghost btn-sm" id="btn-clear-notifs">Temizle</button>
-            </div>
-            <div id="notif-center-list"></div>
-          </div>
-        </div>
-        <button class="btn btn-gold" id="btn-new-task">
-          <span>+</span> Yeni Görev
-        </button>
-        <button class="quick-capture-fab" id="btn-quick-capture" title="Hızlı Ekle (Ctrl+Space)">⚡</button>
-        <div class="user-menu-wrap">
-          <div class="user-avatar" id="userAvatar">?</div>
-          <div class="user-dropdown" id="userDropdown">
-            <div class="user-dropdown-header">
-              <div class="user-dropdown-name" id="dd-name">Kullanıcı</div>
-              <div class="user-dropdown-email" id="dd-email"></div>
-            </div>
-            <div class="user-dropdown-item" id="btn-open-settings">⚙️ Ayarlar</div>
-            <div class="user-dropdown-item danger" id="btn-logout">🚪 Çıkış Yap</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Body ────────────────────────────────────────────────── -->
-    <div id="body-wrap">
-
-      <!-- ── Left Nav ────────────────────────────────────────── -->
-      <div id="leftnav">
-        <div class="nav-section">
-          <div class="nav-section-label">Görünümler</div>
-          <div class="nav-item active" data-nav="today">
-            <span class="nav-icon">📅</span>
-            <span>Bugün</span>
-            <span class="nav-count" id="count-today">0</span>
-          </div>
-          <div class="nav-item" data-nav="upcoming">
-            <span class="nav-icon">🔮</span>
-            <span>Yaklaşan</span>
-            <span class="nav-count" id="count-upcoming">0</span>
-          </div>
-          <div class="nav-item" data-nav="weekly">
-            <span class="nav-icon">📆</span>
-            <span>Haftalık</span>
-          </div>
-          <div class="nav-item" data-nav="kanban">
-            <span class="nav-icon">📋</span>
-            <span>Kanban</span>
-          </div>
-          <div class="nav-item" data-nav="notes">
-            <span class="nav-icon">📝</span>
-            <span>Notlar</span>
-          </div>
-          <div class="nav-item" data-nav="tracker">
-            <span class="nav-icon">📊</span>
-            <span>Takip</span>
-          </div>
-          <div class="nav-item" data-nav="schedule">
-            <span class="nav-icon">🗓</span>
-            <span>Program</span>
-          </div>
-          <div class="nav-item" data-nav="stats">
-            <span class="nav-icon">📈</span>
-            <span>İstatistikler</span>
-          </div>
-          <div class="nav-item" data-nav="calendar">
-            <span class="nav-icon">📆</span>
-            <span>Takvim</span>
-          </div>
-        </div>
-
-        <div class="sep"></div>
-
-        <div class="nav-section">
-          <div class="nav-section-label">Kategoriler</div>
-          <div class="nav-item" data-nav="list" data-cat="İş">
-            <span class="nav-icon">💼</span><span>İş</span>
-          </div>
-          <div class="nav-item" data-nav="list" data-cat="Kişisel">
-            <span class="nav-icon">👤</span><span>Kişisel</span>
-          </div>
-          <div class="nav-item" data-nav="list" data-cat="Toplantı">
-            <span class="nav-icon">🤝</span><span>Toplantı</span>
-          </div>
-          <div class="nav-item" data-nav="list" data-cat="Sağlık">
-            <span class="nav-icon">💪</span><span>Sağlık</span>
-          </div>
-          <div class="nav-item" data-nav="list" data-cat="Eğitim">
-            <span class="nav-icon">📖</span><span>Eğitim</span>
-          </div>
-        </div>
-
-        <div class="sep"></div>
-
-        <div class="nav-section">
-          <div class="nav-section-label">Defterler</div>
-          <div id="nav-notebooks-list"></div>
-        </div>
-
-        <div class="sep"></div>
-
-        <div class="nav-section">
-          <div class="nav-section-label">Etiketler</div>
-          <div class="nav-tag-list" id="nav-tags"></div>
-        </div>
-
-        <div style="flex:1;"></div>
-
-        <!-- Mini Calendar -->
-        <div class="mini-cal">
-          <div class="mini-cal-header">
-            <span class="mini-cal-title" id="mini-cal-title">Mart 2026</span>
-            <div class="mini-cal-nav">
-              <button id="mini-cal-prev" title="Önceki ay">‹</button>
-              <button id="mini-cal-next" title="Sonraki ay">›</button>
-            </div>
-          </div>
-          <div class="mini-cal-grid" id="mini-cal-grid"></div>
-        </div>
-
-        <!-- Stats -->
-        <div class="nav-stats">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-val" id="stat-today">0</div>
-              <div class="stat-lbl">Bugün</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-val" id="stat-done">0</div>
-              <div class="stat-lbl">Tamamlandı</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-val" id="stat-acil">0</div>
-              <div class="stat-lbl">Acil</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-val" id="stat-notes">0</div>
-              <div class="stat-lbl">Not</div>
-            </div>
-          </div>
-          <div class="progress-section">
-            <div class="progress-label">
-              <span>Bugünkü İlerleme</span>
-              <span id="progress-pct">0%</span>
-            </div>
-            <div class="progress-bar-wrap">
-              <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
-            </div>
-          </div>
-        </div>
-      </div><!-- /leftnav -->
-
-      <!-- ── Main Panel ─────────────────────────────────────── -->
-      <div id="main">
-
-        <!-- VIEW: List -->
-        <div class="view active" id="view-list">
-          <div class="view-header">
-            <div>
-              <h2 class="view-title" id="view-list-title">📅 Bugün</h2>
-            </div>
-            <div class="view-header-right">
-              <div class="view-toggle">
-                <button class="view-toggle-btn active" data-mode="list" title="Liste">☰</button>
-                <button class="view-toggle-btn" data-mode="card" title="Kart">⊞</button>
-              </div>
-              <button class="btn btn-ghost btn-sm" id="btn-templates">📋 Şablonlar</button>
-              <select class="sort-select" id="sort-select">
-                <option value="date">Tarihe göre</option>
-                <option value="priority">Önceliğe göre</option>
-                <option value="created">Oluşturulma</option>
-                <option value="alpha">A-Z</option>
-              </select>
-            </div>
-          </div>
-          <div class="filter-bar">
-            <div class="filter-chip active" data-filter="all">Tümü</div>
-            <div class="filter-chip" data-filter="yuksek">🔴 Yüksek</div>
-            <div class="filter-chip" data-filter="orta">🟠 Orta</div>
-            <div class="filter-chip" data-filter="dusuk">🟢 Düşük</div>
-            <div class="filter-chip" data-filter="done">✅ Tamamlandı</div>
-            <div class="filter-chip" data-filter="repeat">🔄 Tekrarlayan</div>
-          </div>
-          <div class="tasks-scroll">
-            <div id="tasks-container"></div>
-          </div>
-        </div>
-
-        <!-- VIEW: Kanban -->
-        <div class="view" id="view-kanban">
-          <div class="view-header">
-            <h2 class="view-title">📋 Kanban</h2>
-            <div class="view-header-right">
-              <select id="kanban-swimlane-select" class="sort-select">
-                <option value="none">Swimlane: Yok</option>
-                <option value="assignee">Sorumluya Göre</option>
-                <option value="priority">Önceliğe Göre</option>
-              </select>
-            </div>
-          </div>
-          <div class="kanban-scroll">
-            <div class="kanban-board" id="kanban-board"></div>
-          </div>
-        </div>
-
-        <!-- VIEW: Weekly -->
-        <div class="view" id="view-weekly">
-          <div class="view-header">
-            <h2 class="view-title">📆 Haftalık</h2>
-            <div class="view-header-right">
-              <button class="btn btn-ghost btn-sm" id="btn-week-prev">‹</button>
-              <span style="font-size:13px;color:var(--text2);" id="weekly-label"></span>
-              <button class="btn btn-ghost btn-sm" id="btn-week-next">›</button>
-            </div>
-          </div>
-          <div class="weekly-scroll">
-            <div class="weekly-grid" id="weekly-grid"></div>
-          </div>
-        </div>
-
-        <!-- VIEW: Notes -->
-        <div class="view" id="view-notes">
-          <div class="notes-sidebar">
-            <div class="notes-sidebar-header">
-              <div class="notes-sidebar-title">📝 Notlar</div>
-              <button class="notes-new-btn" id="btn-new-note">+ Yeni Not</button>
-            </div>
-            <div class="notes-list" id="notes-list"></div>
-          </div>
-          <div class="notes-editor">
-            <div id="editor-empty" style="display:flex;flex:1;align-items:center;justify-content:center;"></div>
-            <div id="editor-wrap" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
-              <div class="editor-toolbar">
-                <button class="toolbar-btn" data-cmd="bold"                    title="Kalın"><b>B</b></button>
-                <button class="toolbar-btn" data-cmd="italic"                  title="İtalik"><i>I</i></button>
-                <button class="toolbar-btn" data-cmd="underline"               title="Altı çizili"><u>U</u></button>
-                <div class="toolbar-sep"></div>
-                <button class="toolbar-btn" data-cmd="formatBlock" data-val="h2" title="H2">H2</button>
-                <button class="toolbar-btn" data-cmd="formatBlock" data-val="h3" title="H3">H3</button>
-                <div class="toolbar-sep"></div>
-                <button class="toolbar-btn" data-cmd="insertUnorderedList"     title="Liste">☰</button>
-                <button class="toolbar-btn" data-cmd="formatBlock" data-val="blockquote" title="Alıntı">❝</button>
-                <button class="toolbar-btn" data-cmd="formatBlock" data-val="pre" title="Kod">⌨</button>
-                <button class="toolbar-btn" data-cmd="insertHR"                title="Çizgi">—</button>
-                <button class="toolbar-btn" data-cmd="insertTodo"              title="Todo">☑</button>
-                <div class="toolbar-sep"></div>
-                <button class="toolbar-btn" data-cmd="removeFormat"            title="Temizle" style="font-size:11px;">Temizle</button>
-                <button class="toolbar-btn" style="color:var(--red);" id="btn-delete-note" title="Sil">🗑</button>
-              </div>
-              <input type="text" class="editor-title-input" id="editor-title" placeholder="Not başlığı...">
-              <div class="editor-content" id="editor-content" contenteditable="true"></div>
-              <div class="editor-footer">
-                <div class="tag-input-wrap">
-                  <span style="font-size:11px;color:var(--text3);">Etiket:</span>
-                  <div id="tag-chips"></div>
-                  <input type="text" class="tag-add-input" id="tag-input" placeholder="#etiket ekle">
-                </div>
-                <select class="notebook-select" id="editor-notebook">
-                  <option>Kişisel</option>
-                </select>
-                <span class="word-count" id="word-count">0 kelime</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- VIEW: Schedule -->
-        <div class="view" id="view-schedule">
-          <div class="view-header">
-            <h2 class="view-title">🗓 İş Programı</h2>
-            <div class="view-header-right">
-              <div class="schedule-view-tabs">
-                <button class="btn btn-ghost btn-sm schedule-tab active" data-tab="day">Günlük</button>
-                <button class="btn btn-ghost btn-sm schedule-tab" data-tab="week">Haftalık</button>
-              </div>
-              <div class="schedule-nav">
-                <button class="btn btn-ghost btn-sm" id="btn-schedule-prev">‹</button>
-                <span class="schedule-date-label" id="schedule-date-label"></span>
-                <button class="btn btn-ghost btn-sm" id="btn-schedule-next">›</button>
-              </div>
-              <button class="btn btn-gold btn-sm" id="btn-add-block">+ Blok Ekle</button>
-            </div>
-          </div>
-          <div class="schedule-scroll">
-            <div id="schedule-body"></div>
-          </div>
-        </div>
-
-        <!-- VIEW: Tracker -->
-        <div class="view" id="view-tracker">
-          <div class="view-header">
-            <h2 class="view-title">📊 Alışkanlık Takibi</h2>
-            <div class="view-header-right">
-              <div class="tracker-nav">
-                <button class="btn btn-ghost btn-sm" id="btn-tracker-prev">‹</button>
-                <span class="tracker-month-title" id="tracker-month-label">Mart 2026</span>
-                <button class="btn btn-ghost btn-sm" id="btn-tracker-next">›</button>
-              </div>
-              <button class="btn btn-gold btn-sm" id="btn-add-col">+ Alışkanlık Ekle</button>
-            </div>
-          </div>
-          <div class="tracker-scroll">
-            <div id="tracker-table-wrap"></div>
-            <div id="tracker-progress-wrap"></div>
-          </div>
-        </div>
-
-        <!-- VIEW: İstatistikler -->
-        <div class="view" id="view-stats">
-          <div class="view-header">
-            <h2 class="view-title">📈 İstatistikler</h2>
-          </div>
-          <div class="stats-scroll">
-            <div id="tracker-yearly-wrap"></div>
-            <div id="stats-dashboard"></div>
-          </div>
-        </div>
-
-        <!-- VIEW: Takvim -->
-        <div class="view" id="view-calendar">
-          <div class="view-header">
-            <h2 class="view-title">📆 Takvim</h2>
-            <div class="view-header-right">
-              <button class="btn btn-ghost btn-sm" id="btn-cal-prev">‹</button>
-              <span id="cal-month-label" style="font-size:13px;color:var(--text2);min-width:110px;text-align:center;"></span>
-              <button class="btn btn-ghost btn-sm" id="btn-cal-next">›</button>
-            </div>
-          </div>
-          <div class="cal-scroll">
-            <div class="cal-view-wrap">
-              <div id="cal-grid"></div>
-              <div id="cal-day-panel" class="cal-day-panel hidden"></div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /main -->
-    </div><!-- /body-wrap -->
-  </div><!-- /app -->
-
-  <!-- Pomodoro Widget -->
-  <div id="pomodoro-widget" class="pomo-widget hidden">
-    <div class="pomo-header">
-      <span class="pomo-task-name" id="pomo-task"></span>
-      <div class="pomo-header-btns">
-        <button id="pomo-settings-btn" class="pomo-close-btn" title="Süreyi Ayarla">⚙️</button>
-        <button id="pomo-close" class="pomo-close-btn" title="Kapat">✕</button>
-      </div>
-    </div>
-    <!-- Ayar Paneli -->
-    <div id="pomo-settings-panel" class="pomo-settings-panel hidden">
-      <div class="pomo-set-row">
-        <label class="pomo-set-label">🎯 Odak süresi</label>
-        <div class="pomo-set-input-wrap">
-          <input type="number" id="pomo-work-min" class="pomo-set-input" min="1" max="120" value="25">
-          <span class="pomo-set-unit">dk</span>
-        </div>
-      </div>
-      <div class="pomo-set-row">
-        <label class="pomo-set-label">☕ Mola süresi</label>
-        <div class="pomo-set-input-wrap">
-          <input type="number" id="pomo-break-min" class="pomo-set-input" min="1" max="60" value="5">
-          <span class="pomo-set-unit">dk</span>
-        </div>
-      </div>
-      <button id="pomo-apply-settings" class="btn btn-gold btn-sm" style="width:100%;justify-content:center;margin-top:4px;">Uygula</button>
-    </div>
-    <div class="pomo-timer" id="pomo-timer">25:00</div>
-    <div class="pomo-mode" id="pomo-mode" data-mode="work">🎯 Odak</div>
-    <div class="pomo-controls">
-      <button id="pomo-reset" title="Sıfırla">↺</button>
-      <button id="pomo-toggle" class="pomo-main-btn">▶</button>
-      <button id="pomo-skip"  title="Atla">⏭</button>
-    </div>
-    <div class="pomo-sessions" id="pomo-sessions"></div>
-  </div>
-
-  <!-- Hızlı Yakalama Paneli -->
-  <div id="quick-capture-panel" class="quick-panel hidden">
-    <div class="quick-panel-title">⚡ Hızlı Ekle</div>
-    <input id="qc-title" class="form-input" type="text" placeholder="Görev başlığı...">
-    <div class="quick-panel-row">
-      <input id="qc-date" class="form-input" type="date" style="flex:1">
-      <select id="qc-priority" class="form-select" style="flex:1">
-        <option value="orta">🟠 Orta</option>
-        <option value="yuksek">🔴 Yüksek</option>
-        <option value="dusuk">🟢 Düşük</option>
-      </select>
-    </div>
-    <div class="quick-panel-actions">
-      <button class="btn btn-ghost btn-sm" id="qc-full">Tam Form</button>
-      <button class="btn btn-gold btn-sm" id="qc-save">Kaydet</button>
-    </div>
-  </div>
-
-  <!-- Notifications -->
-  <div id="notif-container"></div>
-
-  <!-- ════════════ MODALS ════════════ -->
-
-  <!-- Task Modal -->
-  <div class="modal-overlay hidden" id="modal-task">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title" id="task-modal-title-el">Yeni Görev</h3>
-        <button class="modal-close" data-close-modal="modal-task">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Başlık *</label>
-          <input id="t-title" class="form-input" type="text" placeholder="Görev başlığı">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Notlar</label>
-          <textarea id="t-desc" class="form-textarea" placeholder="Açıklama..."></textarea>
-        </div>
-        <div class="form-row">
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Tarih *</label>
-            <input id="t-date" class="form-input" type="date">
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Saat</label>
-            <input id="t-time" class="form-input" type="time">
-          </div>
-        </div>
-        <div class="form-group" style="margin-top:16px;">
-          <label class="form-label">Öncelik</label>
-          <div class="priority-btns">
-            <button class="priority-btn" data-priority="yuksek">🔴 Yüksek</button>
-            <button class="priority-btn active-orta" data-priority="orta">🟠 Orta</button>
-            <button class="priority-btn" data-priority="dusuk">🟢 Düşük</button>
-          </div>
-        </div>
-        <div class="form-row" style="margin-top:4px;">
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Tekrar</label>
-            <select id="t-repeat" class="form-select">
-              <option value="none">Tekrarsız</option>
-              <option value="daily">Her gün</option>
-              <option value="weekdays">Hafta içi</option>
-              <option value="weekly">Haftalık</option>
-              <option value="monthly">Aylık</option>
-              <option value="yearly">Yıllık</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Kategori</label>
-            <select id="t-category" class="form-select">
-              <option value="">— Seç —</option>
-              <option>İş</option>
-              <option>Kişisel</option>
-              <option>Toplantı</option>
-              <option>Sağlık</option>
-              <option>Eğitim</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group" style="margin-top:16px;">
-          <label class="form-label">Kanban Durumu</label>
-          <select id="t-kanban-status" class="form-select">
-            <option value="bekliyor">Bekliyor</option>
-            <option value="devam">Devam Ediyor</option>
-            <option value="tamamlandi">Tamamlandı</option>
-          </select>
-        </div>
-        <div class="toggle-row">
-          <span class="toggle-label">✉️ E-posta bildirimi</span>
-          <label class="toggle">
-            <input type="checkbox" id="t-email-toggle">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div id="t-email-row" style="display:none;" class="form-group">
-          <label class="form-label">Bildirim e-postası</label>
-          <input id="t-email-to" class="form-input" type="email" placeholder="ornek@email.com">
-        </div>
-
         <!-- Etiketler -->
         <div class="form-group" style="margin-top:12px;">
           <label class="form-label">🏷 Etiketler</label>
@@ -3473,49 +2931,7 @@ window.makeUID = async function (email, password) {
   </div>
 
   <!-- Email Config Modal -->
-  <div class="modal-overlay hidden" id="modal-email-cfg">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title">⚙️ Ayarlar</h3>
-        <button class="modal-close" data-close-modal="modal-email-cfg">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="cfg-section" style="margin-bottom:16px;">
-          <div class="cfg-section-title">Tema</div>
-          <div class="theme-picker" id="theme-picker"></div>
-        </div>
-        <div style="border-top:1px solid var(--border);margin-bottom:16px;"></div>
-        <div class="cfg-section">
-          <div class="cfg-section-title">Hatırlatma Saatleri (en fazla 3)</div>
-          <div class="form-row-3">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Saat 1</label>
-              <input id="ecfg-time1" class="form-input" type="time">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Saat 2</label>
-              <input id="ecfg-time2" class="form-input" type="time">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Saat 3</label>
-              <input id="ecfg-time3" class="form-input" type="time">
-            </div>
-          </div>
-        </div>
-        <div class="cfg-section" style="margin-top:12px;">
-          <div class="cfg-section-title">E-posta Bildirimleri</div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">Bildirim Gönderilecek E-posta</label>
-            <input id="ecfg-to" class="form-input" type="email" placeholder="ornek@email.com">
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" data-close-modal="modal-email-cfg">İptal</button>
-        <button class="btn btn-gold" id="btn-save-email-cfg">Kaydet</button>
-      </div>
-    </div>
-  </div>
+  
 
   <!-- Add Tracker Column Modal -->
   <div class="modal-overlay hidden" id="modal-add-col">
@@ -3622,12 +3038,7 @@ const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağu
 const DAYS = ['Pz','Pt','Sa','Ça','Pe','Cu','Ct'];
 const DAYSFULL = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
 
-// ── Built-in EmailJS config ─────────────────────────────────
-window._BUILTIN_EJS_CFG = {
-  serviceId:  'service_szq980m',
-  templateId: 'template_3km7zg8',
-  publicKey:  'G4kHuOtoD87nydky4'
-};
+
 
 // ── Priority labels ─────────────────────────────────────────
 const PRIORITY_LABELS = {
@@ -3718,7 +3129,7 @@ let g_tasks     = [];
 let g_notes     = [];
 let g_notebooks = ['Kişisel', 'İş', 'Fikirler'];
 let g_reminders = { times: [], tasks: [] }; // {times:["HH:MM"], tasks:[{taskId, type}]}
-let g_emailCfg  = null;  // {serviceId, templateId, publicKey, toEmail}
+
 let g_user      = null;  // {name, email}
 let g_tracker   = {};    // { "YYYY-MM-DD": { c0: bool, c1: bool, ..., note: str } }
 let g_tracker_cols = []; // [{ id, emoji, name }]
@@ -3738,7 +3149,6 @@ window.g_tasks          = g_tasks;
 window.g_notes          = g_notes;
 window.g_notebooks      = g_notebooks;
 window.g_reminders      = g_reminders;
-window.g_emailCfg       = g_emailCfg;
 window.g_user           = g_user;
 window.g_tracker        = g_tracker;
 window.g_tracker_cols   = g_tracker_cols;
@@ -3811,7 +3221,6 @@ function loadState() {
   window.g_notes        = lsGet(pfx + 'g_notes', []);
   window.g_notebooks    = lsGet(pfx + 'g_notebooks', ['Kişisel', 'İş', 'Fikirler']);
   window.g_reminders    = lsGet(pfx + 'g_reminders', { times: [], tasks: [] });
-  window.g_emailCfg     = lsGet('g_email', null);  // e-posta ayarı cihaza özel
   window.g_user         = lsGet('g_user', null);
   window.g_tracker      = lsGet(pfx + 'g_tracker', {});
   window.g_tracker_cols = lsGet(pfx + 'g_tracker_cols', []);
@@ -3834,7 +3243,6 @@ function saveState() {
   lsSet(pfx + 'g_notes',        window.g_notes);
   lsSet(pfx + 'g_notebooks',    window.g_notebooks);
   lsSet(pfx + 'g_reminders',    window.g_reminders);
-  lsSet('g_email',              window.g_emailCfg);
   lsSet(pfx + 'g_tracker',      window.g_tracker);
   lsSet(pfx + 'g_tracker_cols', window.g_tracker_cols);
   scheduleSync();
@@ -4390,8 +3798,6 @@ if (userAvatar && userDropdown) {
 window.openSettings = function () {
   document.getElementById('userDropdown')?.classList.remove('open');
   window.renderThemePicker();
-  document.getElementById('modal-email-cfg')?.classList.remove('hidden');
-  if (typeof window.openEmailConfig === 'function') window.openEmailConfig();
 };
 
 // ── Tema sistemi ───────────────────────────────────────────────
@@ -4691,7 +4097,7 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
     try {
       await tryInitFirebase();
       const existing = await window.fbLoadConfig();
-      if (existing) {
+      if (existing && (existing.token || existing.email)) {
         showErr(errRegister, 'Bu e-posta ile zaten bir hesap var. Giriş yapın.');
         return;
       }
@@ -4705,9 +4111,10 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
     const remember = document.getElementById('reg-remember').checked;
     saveCredentials(remember, email, pass);
 
-    // Firebase'e kaydet
+    // Firebase'e kaydet — e-posta değil, sadece doğrulama token'ı
     try {
-      await window.fbSaveConfig({ email, name, updatedAt: Date.now() });
+      const token = await window.makeAccountToken(email);
+      await window.fbSaveConfig({ token, updatedAt: Date.now() });
     } catch (e) { /* çevrimdışı ok */ }
 
     hideLogin();
@@ -4735,8 +4142,22 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
       await tryInitFirebase();
       const cfgData = await window.fbLoadConfig();
 
-      if (cfgData) {
-        foundUser = { name: cfgData.name || email.split('@')[0], email };
+      if (cfgData && (cfgData.token || cfgData.email)) {
+        // Token varlığı hesabın var olduğunu kanıtlar — e-posta/ad Firebase'de yok
+        const localUser = lsGet('g_user', null);
+        const name = (localUser && localUser.email === email)
+          ? localUser.name
+          : (cfgData.name || email.split('@')[0]);
+        foundUser = { name, email };
+
+        // Eski format (email alanı var) → sessizce token'a migrate et
+        if (!cfgData.token && cfgData.email) {
+          try {
+            const token = await window.makeAccountToken(email);
+            await window.fbSaveConfig({ token, updatedAt: Date.now() });
+            console.log('[Pinle] Hesap güvenli formata taşındı.');
+          } catch (e) { /* çevrimdışı — sonra tekrar dener */ }
+        }
 
         // Firebase'den kullanıcı verisini çek ve kullanıcı prefix'ine yaz
         const allData = await window.fbLoadAll();
@@ -4786,29 +4207,30 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
 
   // ── Kimlik bilgilerini kaydet / sil ───────────────────────
   function saveCredentials(remember, email, pass) {
+    // Güvenlik: Şifre asla localStorage'a kaydedilmez
     if (remember) {
       lsSet('g_remember',    true);
       lsSet('g_saved_email', email);
-      lsSet('g_saved_pass',  pass);
     } else {
       lsDel('g_remember');
       lsDel('g_saved_email');
-      lsDel('g_saved_pass');
     }
+    // Eski sürümlerden kalmış olabilecek şifre verisini temizle
+    lsDel('g_saved_pass');
   }
 
   // ── Sayfa açılışı: formu doldur, her zaman giriş ekranını göster ──
   function checkSession() {
-    const remember    = lsGet('g_remember', false);
-    const savedEmail  = lsGet('g_saved_email', '');
-    const savedPass   = lsGet('g_saved_pass',  '');
+    const remember   = lsGet('g_remember', false);
+    const savedEmail = lsGet('g_saved_email', '');
+    // Güvenlik: Eski sürümden kalmış şifre verisini temizle
+    lsDel('g_saved_pass');
 
-    if (remember && savedEmail && savedPass) {
-      // Giriş formunu otomatik doldur, kullanıcı sadece butona basar
+    if (remember && savedEmail) {
+      // Sadece e-postayı doldur, şifreyi kullanıcı girer
       switchTab('login');
-      document.getElementById('login-email').value       = savedEmail;
-      document.getElementById('login-pass').value        = savedPass;
-      document.getElementById('login-remember').checked  = true;
+      document.getElementById('login-email').value      = savedEmail;
+      document.getElementById('login-remember').checked = true;
     }
 
     loginScreen.style.display = 'flex';
@@ -4826,10 +4248,10 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
   window.doLogout = function () {
     lsDel('g_user');
     lsDel('g_uid');
+    lsDel('g_saved_pass'); // Güvenlik: şifre kalıntısını temizle
     window.g_user = null;
     window._fbUid = null;
     window._sessionRestore = false;
-    // g_remember / g_saved_email / g_saved_pass: bırak, bir sonraki açılışta form dolsun
     location.reload();
   };
 
@@ -4857,255 +4279,6 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
 
   // ── Start ─────────────────────────────────────────────────
   checkSession();
-})();
-
-  </script>
-  <script>
-/* === email.js === */
-/* ============================================================
-   email.js — EmailJS integration + reminder checking
-   ============================================================ */
-
-(function () {
-  let _ejsLoaded = false;
-
-  // ── Load EmailJS SDK ──────────────────────────────────────
-  function loadEmailJS(publicKey) {
-    return new Promise((resolve, reject) => {
-      if (window.emailjs) {
-        emailjs.init(publicKey);
-        _ejsLoaded = true;
-        resolve();
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-      script.onload = () => {
-        emailjs.init(publicKey);
-        _ejsLoaded = true;
-        resolve();
-      };
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-
-  // ── Init email system ─────────────────────────────────────
-  window.initEmail = async function () {
-    const cfg = window.g_emailCfg || window._BUILTIN_EJS_CFG;
-    if (!cfg) return;
-    try {
-      await loadEmailJS(cfg.publicKey);
-      updateEmailStatus(true);
-    } catch (e) {
-      console.warn('[Pinle] EmailJS load failed:', e);
-      updateEmailStatus(false);
-    }
-  };
-
-  // ── Send email ────────────────────────────────────────────
-  window.sendEmail = async function ({ to, subject, message }) {
-    const cfg = window.g_emailCfg || window._BUILTIN_EJS_CFG;
-    if (!cfg || !_ejsLoaded) {
-      console.warn('[Pinle] Email not configured.');
-      return false;
-    }
-    try {
-      await emailjs.send(cfg.serviceId, cfg.templateId, {
-        to_email: to,
-        subject:  subject,
-        message:  message,
-        reply_to: 'pinle.okan@gmail.com'
-      }, cfg.publicKey);
-      return true;
-    } catch (e) {
-      console.error('[Pinle] sendEmail error:', e);
-      return false;
-    }
-  };
-
-  // ── Update topbar email indicator ─────────────────────────
-  function updateEmailStatus(connected) {
-    const el = document.getElementById('emailStatus');
-    if (!el) return;
-    if (connected) {
-      el.classList.add('connected');
-      el.title = 'E-posta bağlı';
-    } else {
-      el.classList.remove('connected');
-      el.title = 'E-posta bağlı değil';
-    }
-  }
-
-  // ── Browser reminder checker ──────────────────────────────
-  let _reminderTimer = null;
-  let _notifiedToday = new Set(); // track sent notifs to avoid duplication
-
-  window.startReminderChecker = function () {
-    if (_reminderTimer) clearInterval(_reminderTimer);
-    _reminderTimer = setInterval(checkReminders, 60000);
-    checkReminders(); // immediate check
-  };
-
-  function checkReminders() {
-    const reminders = window.g_reminders || { times: [], tasks: [] };
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const todayS = window.todayStr();
-
-    // Daily summary reminder slots
-    (reminders.times || []).forEach(timeStr => {
-      const [h, m] = timeStr.split(':').map(Number);
-      const slotMin = h * 60 + m;
-      const key = `daily:${timeStr}:${todayS}`;
-      if (Math.abs(nowMin - slotMin) <= 1 && !_notifiedToday.has(key)) {
-        _notifiedToday.add(key);
-        sendDailySummary(now);
-      }
-    });
-
-    // Task-specific reminders
-    const tasks = window.g_tasks || [];
-    tasks.forEach(task => {
-      if (task.done || !task.date || !task.emailAlert) return;
-      const toEmail = task.emailTo || (window.g_emailCfg ? window.g_emailCfg.toEmail : '') ||
-                      (window.g_user ? window.g_user.email : '');
-      const taskDate = new Date(task.date + 'T' + (task.time || '09:00') + ':00');
-      const taskMin  = taskDate.getHours() * 60 + taskDate.getMinutes();
-
-      // Tam görev saatinde (±1 dk)
-      const exactKey = `exact:${task.id}:${todayS}`;
-      if (
-        now.toDateString() === taskDate.toDateString() &&
-        Math.abs(nowMin - taskMin) <= 1 &&
-        !_notifiedToday.has(exactKey)
-      ) {
-        _notifiedToday.add(exactKey);
-        showNotif('⏰', 'Görev zamanı!', `"${task.title}" için belirlenmiş saat geldi.`, 6000);
-        notifyBrowser('⏰ Görev zamanı!', `"${task.title}"`);
-        if (toEmail) {
-          window.sendEmail({
-            to: toEmail,
-            subject: `⏰ Pinle — Şimdi: ${task.title}`,
-            message: `Görev zamanı geldi!\n\nGörev: ${task.title}\nTarih: ${task.date}\nSaat: ${task.time || '09:00'}${task.desc ? '\nNot: ' + task.desc : ''}`
-          });
-        }
-      }
-
-      // 1 saat önce (±1 dk)
-      const oneHourBefore = new Date(taskDate.getTime() - 3600000);
-      const ohKey = `1h:${task.id}:${todayS}`;
-      if (
-        now.toDateString() === oneHourBefore.toDateString() &&
-        Math.abs(nowMin - (oneHourBefore.getHours() * 60 + oneHourBefore.getMinutes())) <= 1 &&
-        !_notifiedToday.has(ohKey)
-      ) {
-        _notifiedToday.add(ohKey);
-        showNotif('⏰', '1 saat kaldı', `"${task.title}" görevine 1 saat kaldı.`, 5000);
-        notifyBrowser('⏰ 1 saat kaldı', `"${task.title}" görevine 1 saat kaldı.`);
-        if (toEmail) {
-          window.sendEmail({
-            to: toEmail,
-            subject: `⏰ Pinle — 1 saat kaldı: ${task.title}`,
-            message: `Görevinize 1 saat kaldı!\n\nGörev: ${task.title}\nTarih: ${task.date}\nSaat: ${task.time || '09:00'}${task.desc ? '\nNot: ' + task.desc : ''}`
-          });
-        }
-      }
-
-      // 1 gün önce sabah 08:00 (±1 dk)
-      const dayBeforeDate = new Date(task.date);
-      dayBeforeDate.setDate(dayBeforeDate.getDate() - 1);
-      const dbKey = `1d:${task.id}:${todayS}`;
-      if (
-        now.toDateString() === dayBeforeDate.toDateString() &&
-        now.getHours() === 8 && now.getMinutes() <= 1 &&
-        !_notifiedToday.has(dbKey)
-      ) {
-        _notifiedToday.add(dbKey);
-        showNotif('📅', 'Yarın!', `"${task.title}" görevi yarın.`, 5000);
-        notifyBrowser('📅 Yarınki hatırlatma', `"${task.title}" görevi yarın.`);
-        if (toEmail) {
-          window.sendEmail({
-            to: toEmail,
-            subject: `📅 Pinle — Yarın: ${task.title}`,
-            message: `Yarınki göreviniz için hatırlatma!\n\nGörev: ${task.title}\nTarih: ${task.date}\nSaat: ${task.time || '09:00'}${task.desc ? '\nNot: ' + task.desc : ''}`
-          });
-        }
-      }
-    });
-  }
-
-  function sendDailySummary(now) {
-    const todayS = window.todayStr();
-    const todayTasks = (window.g_tasks || []).filter(t => t.date === todayS && !t.done);
-    const count = todayTasks.length;
-    const toEmail = window.g_emailCfg ? window.g_emailCfg.toEmail : '';
-    const msg = count > 0
-      ? `Bugün ${count} göreviniz var: ${todayTasks.slice(0, 3).map(t => t.title).join(', ')}`
-      : 'Bugün tamamlanmış göreviniz yok. Harika iş!';
-
-    showNotif('📋', 'Günlük özet', msg, 6000);
-    notifyBrowser('📋 Pinle — Günlük Özet', msg);
-    if (toEmail) {
-      const lines = count > 0
-        ? todayTasks.map((t, i) => `${i + 1}. ${t.title}${t.time ? ' (' + t.time + ')' : ''}`).join('\n')
-        : 'Bugün tamamlanmamış görev yok.';
-      window.sendEmail({
-        to: toEmail,
-        subject: `📋 Pinle — Günlük Özet`,
-        message: `Bugün ${count} göreviniz var:\n\n${lines}`
-      });
-    }
-  }
-
-  function notifyBrowser(title, body) {
-    if (!('Notification' in window)) return;
-    if (Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/assets/favicon.svg' });
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then(p => {
-        if (p === 'granted') new Notification(title, { body });
-      });
-    }
-  }
-
-  // ── Open email config ──────────────────────────────────────
-  window.openEmailConfig = function () {
-    const modal = document.getElementById('modal-email-cfg');
-    if (!modal) return;
-    const cfg = window.g_emailCfg || {};
-    document.getElementById('ecfg-to').value = cfg.toEmail || (window.g_user ? window.g_user.email : '');
-
-    const times = (window.g_reminders || {}).times || [];
-    document.getElementById('ecfg-time1').value = times[0] || '';
-    document.getElementById('ecfg-time2').value = times[1] || '';
-    document.getElementById('ecfg-time3').value = times[2] || '';
-
-    modal.classList.remove('hidden');
-  };
-
-  window.saveEmailConfig = async function () {
-    const toEmail = document.getElementById('ecfg-to').value.trim();
-    const t1 = document.getElementById('ecfg-time1').value;
-    const t2 = document.getElementById('ecfg-time2').value;
-    const t3 = document.getElementById('ecfg-time3').value;
-
-    // Builtin credentials + kullanıcının e-postası
-    const builtin = window._BUILTIN_EJS_CFG || {};
-    window.g_emailCfg = { toEmail, serviceId: builtin.serviceId, templateId: builtin.templateId, publicKey: builtin.publicKey };
-    lsSet('g_email', window.g_emailCfg);
-
-    const times = [t1, t2, t3].filter(Boolean);
-    window.g_reminders = window.g_reminders || { times: [], tasks: [] };
-    window.g_reminders.times = times;
-    window.saveReminders();
-
-    document.getElementById('modal-email-cfg').classList.add('hidden');
-
-    await window.initEmail();
-    showNotif('✉️', 'E-posta ayarlandı', 'E-posta bildirimleri etkinleştirildi.');
-    scheduleSync();
-  };
 })();
 
   </script>
@@ -5155,13 +4328,9 @@ window.initApp = function () {
   })().catch(() => {});
 
   // 4. Init email system
-  if (typeof window.initEmail === 'function') {
-    window.initEmail().catch(() => {});
   }
 
   // 5. Start browser reminder checker
-  if (typeof window.startReminderChecker === 'function') {
-    window.startReminderChecker();
   }
 
   // 6. Request notification permission
@@ -5226,8 +4395,6 @@ document.getElementById('btn-new-task')?.addEventListener('click', () => {
       priority:    document.getElementById('qc-priority')?.value || 'orta',
       repeat:      'none',
       category:    null,
-      emailAlert:  false,
-      emailTo:     '',
       kanbanStatus:'bekliyor',
       done:        false,
       createdAt:   Date.now(),
@@ -5297,7 +4464,6 @@ document.querySelectorAll('.view-toggle-btn').forEach(btn => {
 document.getElementById('btn-templates')?.addEventListener('click', () => window.openTemplates());
 
 // ── Email config save ─────────────────────────────────────────
-document.getElementById('btn-save-email-cfg')?.addEventListener('click', () => window.saveEmailConfig());
 
 // ── Firebase config save ──────────────────────────────────────
 document.getElementById('btn-save-fb-cfg')?.addEventListener('click', () => window.saveFirebaseConfig());
@@ -5558,7 +4724,6 @@ function buildTaskCard(task) {
   if (task.time) meta += `<span class="task-badge time">⏰ ${task.time}</span>`;
   if (task.category) meta += `<span class="task-badge cat">🏷 ${task.category}</span>`;
   if (task.repeat && task.repeat !== 'none') meta += `<span class="task-badge repeat">🔄 ${REPEAT_LABELS[task.repeat]}</span>`;
-  if (task.emailAlert) meta += `<span class="task-badge email">✉️</span>`;
   if (isBlocked) meta += `<span class="task-badge blocked">🔒 ${escHtml((blocker.title || '').slice(0,20))}</span>`;
   meta += `<span class="task-badge badge-priority-${task.priority}">${priorityIcon[task.priority] || ''} ${PRIORITY_LABELS[task.priority] || task.priority}</span>`;
 
@@ -5713,9 +4878,6 @@ window.openTaskModal = function (id, e) {
   document.getElementById('t-time').value     = task ? task.time     : '';
   document.getElementById('t-repeat').value   = task ? task.repeat   : 'none';
   document.getElementById('t-category').value = task ? (task.category || '') : '';
-  document.getElementById('t-email-to').value = task ? (task.emailTo || (window.g_emailCfg ? window.g_emailCfg.toEmail : '')) : '';
-  document.getElementById('t-email-toggle').checked = task ? task.emailAlert : false;
-  document.getElementById('t-email-row').style.display = (task && task.emailAlert) ? 'block' : 'none';
 
   // Priority
   const priority = task ? task.priority : 'orta';
@@ -5781,7 +4943,6 @@ document.querySelectorAll('.priority-btn').forEach(btn => {
   btn.addEventListener('click', () => setPriorityBtn(btn.dataset.priority));
 });
 
-document.getElementById('t-email-toggle')?.addEventListener('change', function () {
   document.getElementById('t-email-row').style.display = this.checked ? 'block' : 'none';
 });
 
@@ -5794,7 +4955,6 @@ window.saveTask_modal = function () {
 
   const activePBtn = document.querySelector('.priority-btn[class*="active-"]');
   const priority = activePBtn ? activePBtn.dataset.priority : 'orta';
-  const emailAlert = document.getElementById('t-email-toggle').checked;
 
   const taskData = {
     title,
@@ -5804,8 +4964,6 @@ window.saveTask_modal = function () {
     priority,
     repeat:       document.getElementById('t-repeat').value,
     category:     document.getElementById('t-category').value || null,
-    emailAlert,
-    emailTo:      emailAlert ? document.getElementById('t-email-to').value.trim() : '',
     kanbanStatus: document.getElementById('t-kanban-status')?.value || 'bekliyor',
     assignee:     document.getElementById('t-assignee')?.value.trim() || '',
     estimate:     document.getElementById('t-estimate')?.value || '',
@@ -8526,6 +7684,7 @@ window.openFirebaseConfig = function () {
   const cfg = lsGet('g_fb_cfg', {});
   document.getElementById('fb-apikey').value     = cfg.apiKey     || '';
   document.getElementById('fb-authdomain').value = cfg.authDomain || '';
+    // Güvenlik: apiKey settings ekranında gösterilmez
   document.getElementById('fb-projectid').value  = cfg.projectId  || '';
   document.getElementById('fb-storagebucket').value = cfg.storageBucket || '';
   document.getElementById('fb-senderid').value   = cfg.messagingSenderId || '';
