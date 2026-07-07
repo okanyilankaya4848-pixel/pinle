@@ -2834,18 +2834,16 @@ window.fbLoadConfig = async function () {
  * @param {string} password
  * @returns {string} hex hash
  */
-window.makeUID = async function (email, password) {
-  const msg = `${email.toLowerCase().trim()}:${password}`;
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
-// Hesap doğrulama token'ı — e-postayı açığa çıkarmadan hesap varlığını kanıtlar
-// Firebase _accounts koleksiyonuna bu kaydedilir, e-posta değil
 window.makeAccountToken = async function (email) {
   const msg = 'pinle_account:' + email.toLowerCase().trim();
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
   return 'tok_' + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').slice(0,32);
+};
+
+window.makeUID = async function (email, password) {
+  const msg = `${email.toLowerCase().trim()}:${password}`;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
   </script>
@@ -2882,7 +2880,550 @@ window.makeAccountToken = async function (email) {
       <!-- Register form -->
       <div id="form-register">
         <div id="err-register" class="login-error"></div>
-        <!-- Etiketler -->
+        <div class="form-group">
+          <label class="form-label">Ad Soyad</label>
+          <input id="reg-name" class="form-input" type="text" placeholder="Adınız">
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input id="reg-email" class="form-input" type="email" placeholder="ornek@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şifre</label>
+          <input id="reg-pass" class="form-input" type="password" placeholder="En az 6 karakter">
+        </div>
+        <label class="remember-row">
+          <input type="checkbox" id="reg-remember" checked>
+          Beni Hatırla
+        </label>
+        <button class="btn btn-gold" style="width:100%;justify-content:center;" id="btn-register">
+          Hesap Oluştur
+        </button>
+      </div>
+
+      <!-- Login form -->
+      <div id="form-login" style="display:none;">
+        <div id="err-login" class="login-error"></div>
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input id="login-email" class="form-input" type="email" placeholder="ornek@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şifre</label>
+          <input id="login-pass" class="form-input" type="password" placeholder="Şifreniz">
+        </div>
+        <label class="remember-row">
+          <input type="checkbox" id="login-remember" checked>
+          Beni Hatırla
+        </label>
+        <button class="btn btn-gold" style="width:100%;justify-content:center;" id="btn-login">
+          Giriş Yap
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── App Shell ─────────────────────────────────────────────── -->
+  <div id="app" style="display:none; flex-direction:column; height:100vh; overflow:hidden;">
+
+    <!-- ── Topbar ──────────────────────────────────────────────── -->
+    <div id="topbar">
+      <div class="topbar-logo" onclick="window.setNav('today')" style="cursor:pointer;">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="16" fill="#16161a"/>
+          <path d="M16 5 C12.5 5 9 8.2 9 12 C9 17.5 16 25 16 25 C16 25 23 17.5 23 12 C23 8.2 19.5 5 16 5Z" fill="#d4a853"/>
+          <circle cx="16" cy="12" r="3.5" fill="#0f0f11"/>
+          <line x1="16" y1="25" x2="16" y2="29" stroke="#d4a853" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <span>Pinle</span>
+      </div>
+      <div class="topbar-search" style="position:relative;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="topbar-search" placeholder="Görev, not veya program ara... (Ctrl+K)">
+        <div id="search-results-panel" class="search-panel hidden"></div>
+      </div>
+      <div class="topbar-right">
+        <div class="streak-badge" id="streakBadge">🔥 0 gün serisi</div>
+        <div class="email-status" id="emailStatus" title="E-posta bağlı değil" onclick="window.openEmailConfig()"></div>
+        <div id="sync-indicator" title="Firebase bağlı değil" style="font-size:14px;cursor:default;opacity:0.6"></div>
+        <!-- Bildirim Merkezi -->
+        <div class="notif-bell-wrap" id="notif-bell-wrap">
+          <button class="notif-bell-btn" id="btn-notif-bell" title="Bildirim Merkezi">🔔</button>
+          <span class="notif-bell-badge hidden" id="notif-bell-badge">0</span>
+          <div class="notif-center hidden" id="notif-center">
+            <div class="notif-center-hdr">
+              <span class="notif-center-hdr-title">Bildirimler</span>
+              <button class="btn btn-ghost btn-sm" id="btn-clear-notifs">Temizle</button>
+            </div>
+            <div id="notif-center-list"></div>
+          </div>
+        </div>
+        <button class="btn btn-gold" id="btn-new-task">
+          <span>+</span> Yeni Görev
+        </button>
+        <button class="quick-capture-fab" id="btn-quick-capture" title="Hızlı Ekle (Ctrl+Space)">⚡</button>
+        <div class="user-menu-wrap">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <div class="user-dropdown" id="userDropdown">
+            <div class="user-dropdown-header">
+              <div class="user-dropdown-name" id="dd-name">Kullanıcı</div>
+              <div class="user-dropdown-email" id="dd-email"></div>
+            </div>
+            <div class="user-dropdown-item" id="btn-open-settings">⚙️ Ayarlar</div>
+            <div class="user-dropdown-item danger" id="btn-logout">🚪 Çıkış Yap</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Body ────────────────────────────────────────────────── -->
+    <div id="body-wrap">
+
+      <!-- ── Left Nav ────────────────────────────────────────── -->
+      <div id="leftnav">
+        <div class="nav-section">
+          <div class="nav-section-label">Görünümler</div>
+          <div class="nav-item active" data-nav="today">
+            <span class="nav-icon">📅</span>
+            <span>Bugün</span>
+            <span class="nav-count" id="count-today">0</span>
+          </div>
+          <div class="nav-item" data-nav="upcoming">
+            <span class="nav-icon">🔮</span>
+            <span>Yaklaşan</span>
+            <span class="nav-count" id="count-upcoming">0</span>
+          </div>
+          <div class="nav-item" data-nav="weekly">
+            <span class="nav-icon">📆</span>
+            <span>Haftalık</span>
+          </div>
+          <div class="nav-item" data-nav="kanban">
+            <span class="nav-icon">📋</span>
+            <span>Kanban</span>
+          </div>
+          <div class="nav-item" data-nav="notes">
+            <span class="nav-icon">📝</span>
+            <span>Notlar</span>
+          </div>
+          <div class="nav-item" data-nav="tracker">
+            <span class="nav-icon">📊</span>
+            <span>Takip</span>
+          </div>
+          <div class="nav-item" data-nav="schedule">
+            <span class="nav-icon">🗓</span>
+            <span>Program</span>
+          </div>
+          <div class="nav-item" data-nav="stats">
+            <span class="nav-icon">📈</span>
+            <span>İstatistikler</span>
+          </div>
+          <div class="nav-item" data-nav="calendar">
+            <span class="nav-icon">📆</span>
+            <span>Takvim</span>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="nav-section">
+          <div class="nav-section-label">Kategoriler</div>
+          <div class="nav-item" data-nav="list" data-cat="İş">
+            <span class="nav-icon">💼</span><span>İş</span>
+          </div>
+          <div class="nav-item" data-nav="list" data-cat="Kişisel">
+            <span class="nav-icon">👤</span><span>Kişisel</span>
+          </div>
+          <div class="nav-item" data-nav="list" data-cat="Toplantı">
+            <span class="nav-icon">🤝</span><span>Toplantı</span>
+          </div>
+          <div class="nav-item" data-nav="list" data-cat="Sağlık">
+            <span class="nav-icon">💪</span><span>Sağlık</span>
+          </div>
+          <div class="nav-item" data-nav="list" data-cat="Eğitim">
+            <span class="nav-icon">📖</span><span>Eğitim</span>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="nav-section">
+          <div class="nav-section-label">Defterler</div>
+          <div id="nav-notebooks-list"></div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="nav-section">
+          <div class="nav-section-label">Etiketler</div>
+          <div class="nav-tag-list" id="nav-tags"></div>
+        </div>
+
+        <div style="flex:1;"></div>
+
+        <!-- Mini Calendar -->
+        <div class="mini-cal">
+          <div class="mini-cal-header">
+            <span class="mini-cal-title" id="mini-cal-title">Mart 2026</span>
+            <div class="mini-cal-nav">
+              <button id="mini-cal-prev" title="Önceki ay">‹</button>
+              <button id="mini-cal-next" title="Sonraki ay">›</button>
+            </div>
+          </div>
+          <div class="mini-cal-grid" id="mini-cal-grid"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="nav-stats">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-val" id="stat-today">0</div>
+              <div class="stat-lbl">Bugün</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="stat-done">0</div>
+              <div class="stat-lbl">Tamamlandı</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="stat-acil">0</div>
+              <div class="stat-lbl">Acil</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="stat-notes">0</div>
+              <div class="stat-lbl">Not</div>
+            </div>
+          </div>
+          <div class="progress-section">
+            <div class="progress-label">
+              <span>Bugünkü İlerleme</span>
+              <span id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /leftnav -->
+
+      <!-- ── Main Panel ─────────────────────────────────────── -->
+      <div id="main">
+
+        <!-- VIEW: List -->
+        <div class="view active" id="view-list">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title" id="view-list-title">📅 Bugün</h2>
+            </div>
+            <div class="view-header-right">
+              <div class="view-toggle">
+                <button class="view-toggle-btn active" data-mode="list" title="Liste">☰</button>
+                <button class="view-toggle-btn" data-mode="card" title="Kart">⊞</button>
+              </div>
+              <button class="btn btn-ghost btn-sm" id="btn-templates">📋 Şablonlar</button>
+              <select class="sort-select" id="sort-select">
+                <option value="date">Tarihe göre</option>
+                <option value="priority">Önceliğe göre</option>
+                <option value="created">Oluşturulma</option>
+                <option value="alpha">A-Z</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <div class="filter-chip active" data-filter="all">Tümü</div>
+            <div class="filter-chip" data-filter="yuksek">🔴 Yüksek</div>
+            <div class="filter-chip" data-filter="orta">🟠 Orta</div>
+            <div class="filter-chip" data-filter="dusuk">🟢 Düşük</div>
+            <div class="filter-chip" data-filter="done">✅ Tamamlandı</div>
+            <div class="filter-chip" data-filter="repeat">🔄 Tekrarlayan</div>
+          </div>
+          <div class="tasks-scroll">
+            <div id="tasks-container"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: Kanban -->
+        <div class="view" id="view-kanban">
+          <div class="view-header">
+            <h2 class="view-title">📋 Kanban</h2>
+            <div class="view-header-right">
+              <select id="kanban-swimlane-select" class="sort-select">
+                <option value="none">Swimlane: Yok</option>
+                <option value="assignee">Sorumluya Göre</option>
+                <option value="priority">Önceliğe Göre</option>
+              </select>
+            </div>
+          </div>
+          <div class="kanban-scroll">
+            <div class="kanban-board" id="kanban-board"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: Weekly -->
+        <div class="view" id="view-weekly">
+          <div class="view-header">
+            <h2 class="view-title">📆 Haftalık</h2>
+            <div class="view-header-right">
+              <button class="btn btn-ghost btn-sm" id="btn-week-prev">‹</button>
+              <span style="font-size:13px;color:var(--text2);" id="weekly-label"></span>
+              <button class="btn btn-ghost btn-sm" id="btn-week-next">›</button>
+            </div>
+          </div>
+          <div class="weekly-scroll">
+            <div class="weekly-grid" id="weekly-grid"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: Notes -->
+        <div class="view" id="view-notes">
+          <div class="notes-sidebar">
+            <div class="notes-sidebar-header">
+              <div class="notes-sidebar-title">📝 Notlar</div>
+              <button class="notes-new-btn" id="btn-new-note">+ Yeni Not</button>
+            </div>
+            <div class="notes-list" id="notes-list"></div>
+          </div>
+          <div class="notes-editor">
+            <div id="editor-empty" style="display:flex;flex:1;align-items:center;justify-content:center;"></div>
+            <div id="editor-wrap" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+              <div class="editor-toolbar">
+                <button class="toolbar-btn" data-cmd="bold"                    title="Kalın"><b>B</b></button>
+                <button class="toolbar-btn" data-cmd="italic"                  title="İtalik"><i>I</i></button>
+                <button class="toolbar-btn" data-cmd="underline"               title="Altı çizili"><u>U</u></button>
+                <div class="toolbar-sep"></div>
+                <button class="toolbar-btn" data-cmd="formatBlock" data-val="h2" title="H2">H2</button>
+                <button class="toolbar-btn" data-cmd="formatBlock" data-val="h3" title="H3">H3</button>
+                <div class="toolbar-sep"></div>
+                <button class="toolbar-btn" data-cmd="insertUnorderedList"     title="Liste">☰</button>
+                <button class="toolbar-btn" data-cmd="formatBlock" data-val="blockquote" title="Alıntı">❝</button>
+                <button class="toolbar-btn" data-cmd="formatBlock" data-val="pre" title="Kod">⌨</button>
+                <button class="toolbar-btn" data-cmd="insertHR"                title="Çizgi">—</button>
+                <button class="toolbar-btn" data-cmd="insertTodo"              title="Todo">☑</button>
+                <div class="toolbar-sep"></div>
+                <button class="toolbar-btn" data-cmd="removeFormat"            title="Temizle" style="font-size:11px;">Temizle</button>
+                <button class="toolbar-btn" style="color:var(--red);" id="btn-delete-note" title="Sil">🗑</button>
+              </div>
+              <input type="text" class="editor-title-input" id="editor-title" placeholder="Not başlığı...">
+              <div class="editor-content" id="editor-content" contenteditable="true"></div>
+              <div class="editor-footer">
+                <div class="tag-input-wrap">
+                  <span style="font-size:11px;color:var(--text3);">Etiket:</span>
+                  <div id="tag-chips"></div>
+                  <input type="text" class="tag-add-input" id="tag-input" placeholder="#etiket ekle">
+                </div>
+                <select class="notebook-select" id="editor-notebook">
+                  <option>Kişisel</option>
+                </select>
+                <span class="word-count" id="word-count">0 kelime</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: Schedule -->
+        <div class="view" id="view-schedule">
+          <div class="view-header">
+            <h2 class="view-title">🗓 İş Programı</h2>
+            <div class="view-header-right">
+              <div class="schedule-view-tabs">
+                <button class="btn btn-ghost btn-sm schedule-tab active" data-tab="day">Günlük</button>
+                <button class="btn btn-ghost btn-sm schedule-tab" data-tab="week">Haftalık</button>
+              </div>
+              <div class="schedule-nav">
+                <button class="btn btn-ghost btn-sm" id="btn-schedule-prev">‹</button>
+                <span class="schedule-date-label" id="schedule-date-label"></span>
+                <button class="btn btn-ghost btn-sm" id="btn-schedule-next">›</button>
+              </div>
+              <button class="btn btn-gold btn-sm" id="btn-add-block">+ Blok Ekle</button>
+            </div>
+          </div>
+          <div class="schedule-scroll">
+            <div id="schedule-body"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: Tracker -->
+        <div class="view" id="view-tracker">
+          <div class="view-header">
+            <h2 class="view-title">📊 Alışkanlık Takibi</h2>
+            <div class="view-header-right">
+              <div class="tracker-nav">
+                <button class="btn btn-ghost btn-sm" id="btn-tracker-prev">‹</button>
+                <span class="tracker-month-title" id="tracker-month-label">Mart 2026</span>
+                <button class="btn btn-ghost btn-sm" id="btn-tracker-next">›</button>
+              </div>
+              <button class="btn btn-gold btn-sm" id="btn-add-col">+ Alışkanlık Ekle</button>
+            </div>
+          </div>
+          <div class="tracker-scroll">
+            <div id="tracker-table-wrap"></div>
+            <div id="tracker-progress-wrap"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: İstatistikler -->
+        <div class="view" id="view-stats">
+          <div class="view-header">
+            <h2 class="view-title">📈 İstatistikler</h2>
+          </div>
+          <div class="stats-scroll">
+            <div id="tracker-yearly-wrap"></div>
+            <div id="stats-dashboard"></div>
+          </div>
+        </div>
+
+        <!-- VIEW: Takvim -->
+        <div class="view" id="view-calendar">
+          <div class="view-header">
+            <h2 class="view-title">📆 Takvim</h2>
+            <div class="view-header-right">
+              <button class="btn btn-ghost btn-sm" id="btn-cal-prev">‹</button>
+              <span id="cal-month-label" style="font-size:13px;color:var(--text2);min-width:110px;text-align:center;"></span>
+              <button class="btn btn-ghost btn-sm" id="btn-cal-next">›</button>
+            </div>
+          </div>
+          <div class="cal-scroll">
+            <div class="cal-view-wrap">
+              <div id="cal-grid"></div>
+              <div id="cal-day-panel" class="cal-day-panel hidden"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /main -->
+    </div><!-- /body-wrap -->
+  </div><!-- /app -->
+
+  <!-- Pomodoro Widget -->
+  <div id="pomodoro-widget" class="pomo-widget hidden">
+    <div class="pomo-header">
+      <span class="pomo-task-name" id="pomo-task"></span>
+      <div class="pomo-header-btns">
+        <button id="pomo-settings-btn" class="pomo-close-btn" title="Süreyi Ayarla">⚙️</button>
+        <button id="pomo-close" class="pomo-close-btn" title="Kapat">✕</button>
+      </div>
+    </div>
+    <!-- Ayar Paneli -->
+    <div id="pomo-settings-panel" class="pomo-settings-panel hidden">
+      <div class="pomo-set-row">
+        <label class="pomo-set-label">🎯 Odak süresi</label>
+        <div class="pomo-set-input-wrap">
+          <input type="number" id="pomo-work-min" class="pomo-set-input" min="1" max="120" value="25">
+          <span class="pomo-set-unit">dk</span>
+        </div>
+      </div>
+      <div class="pomo-set-row">
+        <label class="pomo-set-label">☕ Mola süresi</label>
+        <div class="pomo-set-input-wrap">
+          <input type="number" id="pomo-break-min" class="pomo-set-input" min="1" max="60" value="5">
+          <span class="pomo-set-unit">dk</span>
+        </div>
+      </div>
+      <button id="pomo-apply-settings" class="btn btn-gold btn-sm" style="width:100%;justify-content:center;margin-top:4px;">Uygula</button>
+    </div>
+    <div class="pomo-timer" id="pomo-timer">25:00</div>
+    <div class="pomo-mode" id="pomo-mode" data-mode="work">🎯 Odak</div>
+    <div class="pomo-controls">
+      <button id="pomo-reset" title="Sıfırla">↺</button>
+      <button id="pomo-toggle" class="pomo-main-btn">▶</button>
+      <button id="pomo-skip"  title="Atla">⏭</button>
+    </div>
+    <div class="pomo-sessions" id="pomo-sessions"></div>
+  </div>
+
+  <!-- Hızlı Yakalama Paneli -->
+  <div id="quick-capture-panel" class="quick-panel hidden">
+    <div class="quick-panel-title">⚡ Hızlı Ekle</div>
+    <input id="qc-title" class="form-input" type="text" placeholder="Görev başlığı...">
+    <div class="quick-panel-row">
+      <input id="qc-date" class="form-input" type="date" style="flex:1">
+      <select id="qc-priority" class="form-select" style="flex:1">
+        <option value="orta">🟠 Orta</option>
+        <option value="yuksek">🔴 Yüksek</option>
+        <option value="dusuk">🟢 Düşük</option>
+      </select>
+    </div>
+    <div class="quick-panel-actions">
+      <button class="btn btn-ghost btn-sm" id="qc-full">Tam Form</button>
+      <button class="btn btn-gold btn-sm" id="qc-save">Kaydet</button>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div id="notif-container"></div>
+
+  <!-- ════════════ MODALS ════════════ -->
+
+  <!-- Task Modal -->
+  <div class="modal-overlay hidden" id="modal-task">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="task-modal-title-el">Yeni Görev</h3>
+        <button class="modal-close" data-close-modal="modal-task">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Başlık *</label>
+          <input id="t-title" class="form-input" type="text" placeholder="Görev başlığı">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notlar</label>
+          <textarea id="t-desc" class="form-textarea" placeholder="Açıklama..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Tarih *</label>
+            <input id="t-date" class="form-input" type="date">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Saat</label>
+            <input id="t-time" class="form-input" type="time">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+          <label class="form-label">Öncelik</label>
+          <div class="priority-btns">
+            <button class="priority-btn" data-priority="yuksek">🔴 Yüksek</button>
+            <button class="priority-btn active-orta" data-priority="orta">🟠 Orta</button>
+            <button class="priority-btn" data-priority="dusuk">🟢 Düşük</button>
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:4px;">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Tekrar</label>
+            <select id="t-repeat" class="form-select">
+              <option value="none">Tekrarsız</option>
+              <option value="daily">Her gün</option>
+              <option value="weekdays">Hafta içi</option>
+              <option value="weekly">Haftalık</option>
+              <option value="monthly">Aylık</option>
+              <option value="yearly">Yıllık</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Kategori</label>
+            <select id="t-category" class="form-select">
+              <option value="">— Seç —</option>
+              <option>İş</option>
+              <option>Kişisel</option>
+              <option>Toplantı</option>
+              <option>Sağlık</option>
+              <option>Eğitim</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px;">
+          <label class="form-label">Kanban Durumu</label>
+          <select id="t-kanban-status" class="form-select">
+            <option value="bekliyor">Bekliyor</option>
+            <option value="devam">Devam Ediyor</option>
+            <option value="tamamlandi">Tamamlandı</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">✉️ E-posta bildirimi</span>
+          <label class="toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>        <!-- Etiketler -->
         <div class="form-group" style="margin-top:12px;">
           <label class="form-label">🏷 Etiketler</label>
           <div class="tag-input-wrap">
@@ -2931,7 +3472,37 @@ window.makeAccountToken = async function (email) {
   </div>
 
   <!-- Email Config Modal -->
-  
+        <div style="border-top:1px solid var(--border);margin-bottom:16px;"></div>
+        <div class="cfg-section">
+          <div class="cfg-section-title">Hatırlatma Saatleri (en fazla 3)</div>
+          <div class="form-row-3">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Saat 1</label>
+              <input id="ecfg-time1" class="form-input" type="time">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Saat 2</label>
+              <input id="ecfg-time2" class="form-input" type="time">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Saat 3</label>
+              <input id="ecfg-time3" class="form-input" type="time">
+            </div>
+          </div>
+        </div>
+        <div class="cfg-section" style="margin-top:12px;">
+          <div class="cfg-section-title">E-posta Bildirimleri</div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Bildirim Gönderilecek E-posta</label>
+            <input id="ecfg-to" class="form-input" type="email" placeholder="ornek@email.com">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gold" id="btn-save-email-cfg">Kaydet</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Add Tracker Column Modal -->
   <div class="modal-overlay hidden" id="modal-add-col">
@@ -3039,7 +3610,6 @@ const DAYS = ['Pz','Pt','Sa','Ça','Pe','Cu','Ct'];
 const DAYSFULL = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
 
 
-
 // ── Priority labels ─────────────────────────────────────────
 const PRIORITY_LABELS = {
   yuksek: '🔴 Yüksek',
@@ -3129,7 +3699,6 @@ let g_tasks     = [];
 let g_notes     = [];
 let g_notebooks = ['Kişisel', 'İş', 'Fikirler'];
 let g_reminders = { times: [], tasks: [] }; // {times:["HH:MM"], tasks:[{taskId, type}]}
-
 let g_user      = null;  // {name, email}
 let g_tracker   = {};    // { "YYYY-MM-DD": { c0: bool, c1: bool, ..., note: str } }
 let g_tracker_cols = []; // [{ id, emoji, name }]
@@ -3797,7 +4366,15 @@ if (userAvatar && userDropdown) {
 // ── Open settings from dropdown ────────────────────────────────
 window.openSettings = function () {
   document.getElementById('userDropdown')?.classList.remove('open');
-  window.renderThemePicker();
+  // Tema seçiciyi settings modal içinde göster
+  const settingsModal = document.getElementById('modal-settings');
+  if (settingsModal) {
+    settingsModal.classList.remove('hidden');
+    window.renderThemePicker();
+  } else {
+    // Fallback: tema seçiciyi inline göster
+    window.renderThemePicker();
+  }
 };
 
 // ── Tema sistemi ───────────────────────────────────────────────
@@ -3875,7 +4452,17 @@ window.applyTheme = function (id) {
 };
 
 window.renderThemePicker = function () {
-  const wrap = document.getElementById('theme-picker');
+  let wrap = document.getElementById('theme-picker');
+  if (!wrap) {
+    // theme-picker elementi yoksa settings modal içinde oluştur
+    const modal = document.getElementById('modal-settings');
+    if (modal) {
+      wrap = document.createElement('div');
+      wrap.id = 'theme-picker';
+      wrap.className = 'theme-picker';
+      modal.querySelector('.modal-body')?.prepend(wrap) || modal.prepend(wrap);
+    }
+  }
   if (!wrap) return;
   const current = lsGet('g_theme', 'rose');
   wrap.innerHTML = THEMES.map(t => `
@@ -4111,10 +4698,10 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
     const remember = document.getElementById('reg-remember').checked;
     saveCredentials(remember, email, pass);
 
-    // Firebase'e kaydet — e-posta değil, sadece doğrulama token'ı
+    // Firebase'e kaydet
     try {
-      const token = await window.makeAccountToken(email);
-      await window.fbSaveConfig({ token, updatedAt: Date.now() });
+      const _token = await window.makeAccountToken(email);
+      await window.fbSaveConfig({ token: _token, updatedAt: Date.now() });
     } catch (e) { /* çevrimdışı ok */ }
 
     hideLogin();
@@ -4143,20 +4730,15 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
       const cfgData = await window.fbLoadConfig();
 
       if (cfgData && (cfgData.token || cfgData.email)) {
-        // Token varlığı hesabın var olduğunu kanıtlar — e-posta/ad Firebase'de yok
-        const localUser = lsGet('g_user', null);
-        const name = (localUser && localUser.email === email)
-          ? localUser.name
-          : (cfgData.name || email.split('@')[0]);
-        foundUser = { name, email };
-
-        // Eski format (email alanı var) → sessizce token'a migrate et
+        const _localUser = lsGet('g_user', null);
+        const _name = (_localUser && _localUser.email === email)
+          ? _localUser.name : (cfgData.name || email.split('@')[0]);
+        foundUser = { name: _name, email };
         if (!cfgData.token && cfgData.email) {
           try {
-            const token = await window.makeAccountToken(email);
-            await window.fbSaveConfig({ token, updatedAt: Date.now() });
-            console.log('[Pinle] Hesap güvenli formata taşındı.');
-          } catch (e) { /* çevrimdışı — sonra tekrar dener */ }
+            const _tok = await window.makeAccountToken(email);
+            await window.fbSaveConfig({ token: _tok, updatedAt: Date.now() });
+          } catch(e) {}
         }
 
         // Firebase'den kullanıcı verisini çek ve kullanıcı prefix'ine yaz
@@ -4207,7 +4789,7 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
 
   // ── Kimlik bilgilerini kaydet / sil ───────────────────────
   function saveCredentials(remember, email, pass) {
-    // Güvenlik: Şifre asla localStorage'a kaydedilmez
+    lsDel('g_saved_pass'); // Şifre asla saklanmaz
     if (remember) {
       lsSet('g_remember',    true);
       lsSet('g_saved_email', email);
@@ -4215,22 +4797,20 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
       lsDel('g_remember');
       lsDel('g_saved_email');
     }
-    // Eski sürümlerden kalmış olabilecek şifre verisini temizle
-    lsDel('g_saved_pass');
   }
 
   // ── Sayfa açılışı: formu doldur, her zaman giriş ekranını göster ──
   function checkSession() {
-    const remember   = lsGet('g_remember', false);
-    const savedEmail = lsGet('g_saved_email', '');
-    // Güvenlik: Eski sürümden kalmış şifre verisini temizle
-    lsDel('g_saved_pass');
+    const remember    = lsGet('g_remember', false);
+    const savedEmail  = lsGet('g_saved_email', '');
+    const savedPass   = lsGet('g_saved_pass',  '');
 
-    if (remember && savedEmail) {
-      // Sadece e-postayı doldur, şifreyi kullanıcı girer
+    if (remember && savedEmail && savedPass) {
+      // Giriş formunu otomatik doldur, kullanıcı sadece butona basar
       switchTab('login');
-      document.getElementById('login-email').value      = savedEmail;
-      document.getElementById('login-remember').checked = true;
+      document.getElementById('login-email').value       = savedEmail;
+      document.getElementById('login-pass').value        = savedPass;
+      document.getElementById('login-remember').checked  = true;
     }
 
     loginScreen.style.display = 'flex';
@@ -4248,10 +4828,10 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
   window.doLogout = function () {
     lsDel('g_user');
     lsDel('g_uid');
-    lsDel('g_saved_pass'); // Güvenlik: şifre kalıntısını temizle
     window.g_user = null;
     window._fbUid = null;
     window._sessionRestore = false;
+    // g_remember / g_saved_email / g_saved_pass: bırak, bir sonraki açılışta form dolsun
     location.reload();
   };
 
@@ -4328,9 +4908,13 @@ window.initApp = function () {
   })().catch(() => {});
 
   // 4. Init email system
+  if (typeof window.initEmail === 'function') {
+    window.initEmail().catch(() => {});
   }
 
   // 5. Start browser reminder checker
+  if (typeof window.startReminderChecker === 'function') {
+    window.startReminderChecker();
   }
 
   // 6. Request notification permission
@@ -4464,6 +5048,7 @@ document.querySelectorAll('.view-toggle-btn').forEach(btn => {
 document.getElementById('btn-templates')?.addEventListener('click', () => window.openTemplates());
 
 // ── Email config save ─────────────────────────────────────────
+document.getElementById('btn-save-email-cfg')?.addEventListener('click', () => window.saveEmailConfig());
 
 // ── Firebase config save ──────────────────────────────────────
 document.getElementById('btn-save-fb-cfg')?.addEventListener('click', () => window.saveFirebaseConfig());
@@ -4888,8 +5473,8 @@ window.openTaskModal = function (id, e) {
   if (ksEl) ksEl.value = task ? (task.kanbanStatus || 'bekliyor') : 'bekliyor';
 
   // Sorumlu & Tahmini süre
-  const assigneeEl = document.getElementById('t-assignee');
-  const estimateEl = document.getElementById('t-estimate');
+  const assigneeEl = document.getElementById('t-assignee')?;
+  const estimateEl = document.getElementById('t-estimate')?;
   if (assigneeEl) assigneeEl.value = task ? (task.assignee || '') : '';
   if (estimateEl) estimateEl.value = task ? (task.estimate || '') : '';
 
@@ -4943,45 +5528,6 @@ document.querySelectorAll('.priority-btn').forEach(btn => {
   btn.addEventListener('click', () => setPriorityBtn(btn.dataset.priority));
 });
 
-  document.getElementById('t-email-row').style.display = this.checked ? 'block' : 'none';
-});
-
-window.saveTask_modal = function () {
-  const title = document.getElementById('t-title').value.trim();
-  if (!title) { showNotif('⚠️', 'Başlık gerekli', 'Lütfen görev başlığı girin.'); return; }
-
-  const date = document.getElementById('t-date').value;
-  if (!date) { showNotif('⚠️', 'Tarih gerekli', 'Lütfen bir tarih seçin.'); return; }
-
-  const activePBtn = document.querySelector('.priority-btn[class*="active-"]');
-  const priority = activePBtn ? activePBtn.dataset.priority : 'orta';
-
-  const taskData = {
-    title,
-    desc:         document.getElementById('t-desc').value.trim(),
-    date,
-    time:         document.getElementById('t-time').value,
-    priority,
-    repeat:       document.getElementById('t-repeat').value,
-    category:     document.getElementById('t-category').value || null,
-    kanbanStatus: document.getElementById('t-kanban-status')?.value || 'bekliyor',
-    assignee:     document.getElementById('t-assignee')?.value.trim() || '',
-    estimate:     document.getElementById('t-estimate')?.value || '',
-    dependsOn:    document.getElementById('t-depends-on')?.value || null,
-    tags:         _collectTaskTags(),
-    subtasks:     _collectSubtasks(_editingTaskId)
-  };
-
-  if (_editingTaskId) {
-    const task = findTask(_editingTaskId);
-    if (task) Object.assign(task, taskData);
-  } else {
-    window.g_tasks.push({
-      id:        Date.now().toString(),
-      done:      false,
-      createdAt: Date.now(),
-      ...taskData
-    });
   }
 
   window.saveTask();
@@ -7679,12 +8225,11 @@ window.loadFromFirebase = async function () {
 
 // ── Firebase config modal ─────────────────────────────────────
 window.openFirebaseConfig = function () {
-  const modal = document.getElementById('modal-fb-cfg');
+  const modal = document.getElementById('modal-fb-cfg')?;
   if (!modal) return;
   const cfg = lsGet('g_fb_cfg', {});
   document.getElementById('fb-apikey').value     = cfg.apiKey     || '';
   document.getElementById('fb-authdomain').value = cfg.authDomain || '';
-    // Güvenlik: apiKey settings ekranında gösterilmez
   document.getElementById('fb-projectid').value  = cfg.projectId  || '';
   document.getElementById('fb-storagebucket').value = cfg.storageBucket || '';
   document.getElementById('fb-senderid').value   = cfg.messagingSenderId || '';
@@ -7708,7 +8253,7 @@ window.saveFirebaseConfig = async function () {
   }
 
   lsSet('g_fb_cfg', cfg);
-  document.getElementById('modal-fb-cfg').classList.add('hidden');
+  document.getElementById('modal-fb-cfg')?.classList.add('hidden');
 
   try {
     const ok = await window.initFirebase(cfg);
@@ -7725,6 +8270,23 @@ window.saveFirebaseConfig = async function () {
 };
 
   </script>
+
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay hidden" id="modal-settings">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-header">
+        <h3 class="modal-title">Ayarlar</h3>
+        <button class="modal-close" data-close-modal="modal-settings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="cfg-section" style="margin-bottom:16px;">
+          <div class="cfg-section-title">Tema</div>
+          <div class="theme-picker" id="theme-picker"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
