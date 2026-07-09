@@ -3814,32 +3814,32 @@ function saveState() {
   lsSet(pfx + 'g_reminders',    window.g_reminders);
   lsSet(pfx + 'g_tracker',      window.g_tracker);
   lsSet(pfx + 'g_tracker_cols', window.g_tracker_cols);
-  scheduleSync();
+  if (typeof window.scheduleSync === 'function') window.scheduleSync();
 }
 
 function saveTask() {
   lsSet(userPrefix() + 'g_tasks', window.g_tasks);
-  scheduleSync();
+  if (typeof window.scheduleSync === 'function') window.scheduleSync();
 }
 function saveNotes() {
   const pfx = userPrefix();
   lsSet(pfx + 'g_notes',     window.g_notes);
   lsSet(pfx + 'g_notebooks', window.g_notebooks);
-  scheduleSync();
+  if (typeof window.scheduleSync === 'function') window.scheduleSync();
 }
 function saveReminders() {
   lsSet(userPrefix() + 'g_reminders', window.g_reminders);
-  scheduleSync();
+  if (typeof window.scheduleSync === 'function') window.scheduleSync();
 }
 function saveTracker() {
   const pfx = userPrefix();
   lsSet(pfx + 'g_tracker',      window.g_tracker);
   lsSet(pfx + 'g_tracker_cols', window.g_tracker_cols);
-  scheduleSync();
+  if (typeof window.scheduleSync === 'function') window.scheduleSync();
 }
 function saveSchedule() {
   lsSet(userPrefix() + 'g_schedule', window.g_schedule);
-  scheduleSync();
+  if (typeof window.scheduleSync === 'function') window.scheduleSync();
 }
 
 // ── Today string — yerel tarih (toISOString UTC verir, gece kayması yapar) ────
@@ -6368,29 +6368,28 @@ window.escHtml = escHtml;
     if (el) el.textContent = `${MONTHS[window.trackerMonth]} ${window.trackerYear}`;
   }
 
-  // ── Tracker table event delegation (bir kez bağlanır) ──────
-  document.addEventListener('DOMContentLoaded', function () {
-    const wrap = document.getElementById('tracker-table-wrap');
-    if (!wrap) return;
-    wrap.addEventListener('click', function (e) {
-      const target = e.target.closest('[data-action]');
-      if (!target) return;
-      const action = target.dataset.action;
-      const ds     = target.dataset.date;
-      const ci     = target.dataset.col !== undefined ? parseInt(target.dataset.col, 10) : null;
+  // ── Tracker table event delegation ──────────────────────────
+  // (document üzerinde dinle — wrap her render'da yenileniyor)
+  document.addEventListener('click', function (e) {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    // Sadece tracker tablosu içindeki elementleri yakala
+    if (!target.closest('#tracker-table-wrap')) return;
+    const action = target.dataset.action;
+    const ds     = target.dataset.date;
+    const ci     = target.dataset.col !== undefined ? parseInt(target.dataset.col, 10) : null;
 
-      if (action === 'toggle') {
-        window.toggleTrackerCell(ds, ci);
-      } else if (action === 'edit-note') {
-        window.editTrackerNote(ds, target);
-      } else if (action === 'day-detail') {
-        if (typeof window.openDayDetail === 'function') window.openDayDetail(ds);
-      } else if (action === 'edit-col') {
-        if (typeof window.editTrackerCol === 'function') window.editTrackerCol(ci);
-      } else if (action === 'del-col') {
-        if (typeof window.deleteTrackerCol === 'function') window.deleteTrackerCol(ci);
-      }
-    });
+    if (action === 'toggle') {
+      window.toggleTrackerCell(ds, ci);
+    } else if (action === 'edit-note') {
+      window.editTrackerNote(ds, target);
+    } else if (action === 'day-detail') {
+      if (typeof window.openDayDetail === 'function') window.openDayDetail(ds);
+    } else if (action === 'edit-col') {
+      if (typeof window.editTrackerCol === 'function') window.editTrackerCol(ci);
+    } else if (action === 'del-col') {
+      if (typeof window.deleteTrackerCol === 'function') window.deleteTrackerCol(ci);
+    }
   });
 
   // ── Table ─────────────────────────────────────────────────
@@ -6417,8 +6416,8 @@ window.escHtml = escHtml;
           <span class="col-header-emoji">${col.emoji}</span>
           <span class="col-header-name">${escHtml(col.name)}</span>
           <span class="col-header-actions">
-            <button class="col-header-btn" onclick="editTrackerCol(${ci})" title="Düzenle">✏️</button>
-            <button class="col-header-btn del" onclick="deleteTrackerCol(${ci})" title="Sil">✕</button>
+            <button class="col-header-btn" data-action="edit-col" data-col="${ci}" title="Düzenle">✏️</button>
+            <button class="col-header-btn del" data-action="del-col" data-col="${ci}" title="Sil">✕</button>
           </span>
         </div>
       </th>`;
@@ -6437,15 +6436,16 @@ window.escHtml = escHtml;
       const rowClass   = isToday ? 'today-row' : isWeekend ? 'weekend' : '';
 
       html += `<tr class="${rowClass}">`;
-      html += `<td class="col-day day-clickable" onclick="openDayDetail('${ds}')">${d}</td>`;
-      html += `<td class="col-name day-clickable" onclick="openDayDetail('${ds}')">${DAYSFULL[dow]}</td>`;
+      html += `<td class="col-day day-clickable" data-action="day-detail" data-date="${ds}">${d}</td>`;
+      html += `<td class="col-name day-clickable" data-action="day-detail" data-date="${ds}">${DAYSFULL[dow]}</td>`;
 
       cols.forEach((col, ci) => {
         const checked = !!rowData['c' + ci];
         html += `<td>
           <div class="tracker-cell ${checked ? 'checked' : ''}"
-               data-date="${ds}" data-col="${ci}"
-               onclick="toggleTrackerCell('${ds}', ${ci})">
+               data-action="toggle"
+               data-date="${ds}"
+               data-col="${ci}">
             ${checked ? col.emoji : ''}
           </div>
         </td>`;
