@@ -6526,6 +6526,10 @@ window.escHtml = escHtml;
     }
     // Progress bölümünü yenile
     renderTrackerProgress();
+    // İşareti anında Firebase'e yaz
+    if (window._fbReady && window._fbUid && typeof window.fbSave === 'function') {
+      window.fbSave('g_tracker', window.g_tracker).catch(() => {});
+    }
   };
 
   // ── Edit note inline ───────────────────────────────────────
@@ -6560,6 +6564,10 @@ window.escHtml = escHtml;
       // el hâlâ DOM'da mı kontrol et
       if (el && el.parentNode) {
         el.innerHTML = `<span class="note-text">${escHtml(val) || '<span style="color:var(--text3);font-size:11px">+</span>'}</span>`;
+      }
+      // Notu anında Firebase'e yaz — debounce beklersek sayfa kapanınca kaybolur
+      if (window._fbReady && window._fbUid && typeof window.fbSave === 'function') {
+        window.fbSave('g_tracker', window.g_tracker).catch(() => {});
       }
     };
 
