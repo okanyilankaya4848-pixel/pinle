@@ -2717,11 +2717,11 @@ import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/1
 
 // Built-in Firebase config — tüm kullanıcılar bu projeye bağlanır
 window._BUILTIN_FB_CFG = {
-  apiKey:            "",
-  authDomain:        "",
-  projectId:         "",
-  storageBucket:     "",
-  appId:             ""
+  apiKey:            "AIzaSyDGRpKNtkI_9blmfZrpMBI4vH691AAjuzc",
+  authDomain:        "pinlee.firebaseapp.com",
+  projectId:         "pinlee",
+  storageBucket:     "pinlee.appspot.com",
+  appId:             "1:419515948173:web:950420ab5f9055225c16c4"
 };
 
 let _db = null;
@@ -4801,16 +4801,14 @@ document.getElementById('btn-cal-next')?.addEventListener('click', () => {
 
   // ── Sayfa açılışı: formu doldur, her zaman giriş ekranını göster ──
   function checkSession() {
-    const remember    = lsGet('g_remember', false);
-    const savedEmail  = lsGet('g_saved_email', '');
-    const savedPass   = lsGet('g_saved_pass',  '');
+    const remember   = lsGet('g_remember', false);
+    const savedEmail = lsGet('g_saved_email', '');
+    lsDel('g_saved_pass'); // Güvenlik: şifre asla saklanmaz
 
-    if (remember && savedEmail && savedPass) {
-      // Giriş formunu otomatik doldur, kullanıcı sadece butona basar
+    if (remember && savedEmail) {
       switchTab('login');
-      document.getElementById('login-email').value       = savedEmail;
-      document.getElementById('login-pass').value        = savedPass;
-      document.getElementById('login-remember').checked  = true;
+      document.getElementById('login-email').value      = savedEmail;
+      document.getElementById('login-remember').checked = true;
     }
 
     loginScreen.style.display = 'flex';
@@ -5473,8 +5471,8 @@ window.openTaskModal = function (id, e) {
   if (ksEl) ksEl.value = task ? (task.kanbanStatus || 'bekliyor') : 'bekliyor';
 
   // Sorumlu & Tahmini süre
-  const assigneeEl = document.getElementById('t-assignee')?;
-  const estimateEl = document.getElementById('t-estimate')?;
+  const assigneeEl = document.getElementById('t-assignee');
+  const estimateEl = document.getElementById('t-estimate');
   if (assigneeEl) assigneeEl.value = task ? (task.assignee || '') : '';
   if (estimateEl) estimateEl.value = task ? (task.estimate || '') : '';
 
@@ -5528,6 +5526,42 @@ document.querySelectorAll('.priority-btn').forEach(btn => {
   btn.addEventListener('click', () => setPriorityBtn(btn.dataset.priority));
 });
 
+window.saveTask_modal = function () {
+  const title = document.getElementById('t-title').value.trim();
+  if (!title) { showNotif('⚠️', 'Başlık gerekli', 'Lütfen görev başlığı girin.'); return; }
+
+  const date = document.getElementById('t-date').value;
+  if (!date) { showNotif('⚠️', 'Tarih gerekli', 'Lütfen bir tarih seçin.'); return; }
+
+  const activePBtn = document.querySelector('.priority-btn[class*="active-"]');
+  const priority = activePBtn ? activePBtn.dataset.priority : 'orta';
+
+  const ksEl = document.getElementById('t-kanban-status');
+  const taskData = {
+    title,
+    desc:        document.getElementById('t-desc').value.trim(),
+    date,
+    time:        document.getElementById('t-time').value,
+    repeat:      document.getElementById('t-repeat').value,
+    category:    document.getElementById('t-category').value.trim(),
+    priority,
+    kanbanStatus: ksEl ? ksEl.value : 'bekliyor',
+    assignee:    document.getElementById('t-assignee')?.value.trim() || '',
+    estimate:    document.getElementById('t-estimate')?.value.trim() || '',
+    dependsOn:   document.getElementById('t-depends-on')?.value || null,
+    tags:        _collectTaskTags(),
+    subtasks:    _collectSubtasks(),
+  };
+
+  if (_editingTaskId) {
+    const task = findTask(_editingTaskId);
+    if (task) Object.assign(task, taskData);
+  } else {
+    taskData.id     = 'task_' + Date.now();
+    taskData.done   = false;
+    taskData.doneAt = null;
+    taskData.createdAt = Date.now();
+    window.g_tasks.push(taskData);
   }
 
   window.saveTask();
@@ -8225,7 +8259,7 @@ window.loadFromFirebase = async function () {
 
 // ── Firebase config modal ─────────────────────────────────────
 window.openFirebaseConfig = function () {
-  const modal = document.getElementById('modal-fb-cfg')?;
+  const modal = document.getElementById('modal-fb-cfg');
   if (!modal) return;
   const cfg = lsGet('g_fb_cfg', {});
   document.getElementById('fb-apikey').value     = cfg.apiKey     || '';
